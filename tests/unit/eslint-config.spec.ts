@@ -4,7 +4,7 @@ import { ESLint } from 'eslint'
 import { describe, expect, it } from 'vitest'
 
 const productionFile = resolve(process.cwd(), 'src/main.ts')
-const testFile = resolve(process.cwd(), 'tests/unit/HomeView.spec.ts')
+const testFile = resolve(process.cwd(), 'tests/unit/LibraryView.spec.ts')
 
 const getRuleSeverity = (config: unknown, ruleName: string): unknown => {
   if (typeof config !== 'object' || config === null || !('rules' in config)) {
