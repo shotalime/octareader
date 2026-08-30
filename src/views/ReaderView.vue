@@ -135,7 +135,12 @@ onBeforeUnmount(() => void session.value?.destroy())
         </div>
       </div>
 
-      <div class="relative bg-[#f5f0e4] p-2 sm:p-5">
+      <div
+        class="relative p-2 sm:p-5"
+        :class="
+          session?.appearance.theme === 'dark' ? 'bg-stone-950' : 'bg-[#f5f0e4]'
+        "
+      >
         <aside
           v-if="isTableOfContentsOpen && session"
           id="reader-toc"
@@ -168,7 +173,12 @@ onBeforeUnmount(() => void session.value?.destroy())
         <div
           ref="viewport"
           data-testid="reader-viewport"
-          class="mx-auto h-[65dvh] min-h-[30rem] max-w-5xl overflow-hidden rounded-2xl bg-[#fffdf7] shadow-sm"
+          class="mx-auto h-[65dvh] min-h-[30rem] max-w-5xl overflow-hidden rounded-2xl shadow-sm"
+          :class="
+            session?.appearance.theme === 'dark'
+              ? 'bg-stone-900'
+              : 'bg-[#fffdf7]'
+          "
         />
         <div
           v-if="isLoading"

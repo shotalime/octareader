@@ -5,6 +5,10 @@ import type { NavItem } from 'epubjs/types/navigation'
 
 import { database, type OctaReaderDatabase } from '@/data/database'
 import type { ReadingProgress } from '@/data/models'
+import {
+  SettingsRepository,
+  type ReaderAppearanceSettings,
+} from '@/domain/settings'
 
 export const READER_ERROR_MESSAGE =
   'Не удалось открыть книгу. Возможно, файл повреждён или имеет неподдерживаемый формат.'
@@ -17,6 +21,7 @@ export type ReaderSession = {
   nextChapter: () => Promise<void>
   previousChapter: () => Promise<void>
   tableOfContents: TableOfContentsItem[]
+  appearance: ReaderAppearanceSettings
   goTo: (href: string) => Promise<void>
   destroy: () => Promise<void>
 }
@@ -44,6 +49,30 @@ const progressFromCfi = (book: Book, cfi: string): number | null => {
   } catch {
     return null
   }
+}
+
+const applyAppearance = (
+  rendition: Rendition,
+  settings: ReaderAppearanceSettings,
+): void => {
+  const dark = settings.theme === 'dark'
+  rendition.themes.register('octareader', {
+    body: {
+      color: dark ? '#e7e5e4' : '#292524',
+      background: dark ? '#1c1917' : '#fffdf7',
+      'line-height': `${settings.lineHeight} !important`,
+      'padding-left': `${settings.marginPercent}% !important`,
+      'padding-right': `${settings.marginPercent}% !important`,
+    },
+    a: { color: dark ? '#86efac' : '#166534' },
+  })
+  rendition.themes.select('octareader')
+  rendition.themes.fontSize(`${settings.fontSizePercent}%`)
+  rendition.themes.font(
+    settings.fontFamily === 'serif'
+      ? 'Georgia, Cambria, serif'
+      : 'Inter, Arial, sans-serif',
+  )
 }
 
 export type TableOfContentsItem = {
@@ -91,7 +120,11 @@ const chapterHref = (
 }
 
 export class ReaderService {
-  constructor(private readonly db: OctaReaderDatabase = database) {}
+  private readonly settings: SettingsRepository
+
+  constructor(private readonly db: OctaReaderDatabase = database) {
+    this.settings = new SettingsRepository(db)
+  }
 
   private async storeLocations(
     bookId: string,
@@ -141,9 +174,10 @@ export class ReaderService {
       throw new Error(READER_ERROR_MESSAGE)
     }
 
-    const [savedLocations, savedProgress] = await Promise.all([
+    const [savedLocations, savedProgress, appearance] = await Promise.all([
       this.db.locations.get(bookId),
       this.db.readingProgress.get(bookId),
+      this.settings.getReaderAppearance(),
     ])
 
     let book: Book | null = null
@@ -164,6 +198,7 @@ export class ReaderService {
         flow: 'paginated',
         spread: 'auto',
       })
+      applyAppearance(rendition, appearance)
       try {
         await rendition.display(savedProgress?.cfi)
       } catch {
@@ -261,6 +296,7 @@ export class ReaderService {
       nextChapter: async () => displayChapter(1),
       previousChapter: async () => displayChapter(-1),
       tableOfContents,
+      appearance,
       goTo: async (href: string) => openedRendition.display(href),
       destroy: async () => {
         active = false

@@ -32,6 +32,13 @@ beforeEach(() => {
     nextChapter: mocks.nextChapter,
     previousChapter: mocks.previousChapter,
     destroy: mocks.destroy,
+    appearance: {
+      fontSizePercent: 100,
+      fontFamily: 'serif',
+      lineHeight: 1.6,
+      marginPercent: 8,
+      theme: 'light',
+    },
     tableOfContents: [
       {
         id: 'chapter-1',
@@ -64,6 +71,13 @@ describe('ReaderView', () => {
       nextChapter: mocks.nextChapter,
       previousChapter: mocks.previousChapter,
       destroy: mocks.destroy,
+      appearance: {
+        fontSizePercent: 100,
+        fontFamily: 'serif',
+        lineHeight: 1.6,
+        marginPercent: 8,
+        theme: 'light',
+      },
       tableOfContents: [],
       goTo: mocks.goTo,
     })

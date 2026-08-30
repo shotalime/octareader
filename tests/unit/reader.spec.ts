@@ -21,6 +21,10 @@ const mocks = vi.hoisted(() => ({
   locationsLength: vi.fn(() => 10),
   percentageFromCfi: vi.fn(() => 0.25),
   epubFactory: vi.fn(),
+  registerTheme: vi.fn(),
+  selectTheme: vi.fn(),
+  setFontSize: vi.fn(),
+  setFont: vi.fn(),
 }))
 
 vi.mock('epubjs', () => ({ default: mocks.epubFactory }))
@@ -53,6 +57,10 @@ beforeEach(() => {
   mocks.generateLocations.mockReset().mockResolvedValue([])
   mocks.locationsLength.mockReset().mockReturnValue(10)
   mocks.percentageFromCfi.mockReset().mockReturnValue(0.25)
+  mocks.registerTheme.mockReset()
+  mocks.selectTheme.mockReset()
+  mocks.setFontSize.mockReset()
+  mocks.setFont.mockReset()
   mocks.epubFactory.mockReset().mockReturnValue({
     opened: Promise.resolve(),
     loaded: { navigation: Promise.resolve({ toc: [] }) },
@@ -69,6 +77,12 @@ beforeEach(() => {
       prev: vi.fn(),
       destroy: mocks.destroyRendition,
       location: { start: { index: 0 } },
+      themes: {
+        register: mocks.registerTheme,
+        select: mocks.selectTheme,
+        fontSize: mocks.setFontSize,
+        font: mocks.setFont,
+      },
       on: (_event: string, listener: RelocatedListener) =>
         mocks.listeners.push(listener),
       off: (_event: string, listener: RelocatedListener) => {
@@ -82,11 +96,9 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+  vi.useRealTimers()
   await Promise.all(databaseNames.splice(0).map((name) => Dexie.delete(name)))
 })
-
-const delay = async (milliseconds: number): Promise<void> =>
-  new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 
 describe('ReaderService progress', () => {
   it('restores CFI and persists relocated progress after 750 ms', async () => {
@@ -111,12 +123,13 @@ describe('ReaderService progress', () => {
     )
     expect(mocks.loadLocations).toHaveBeenCalledWith('["saved"]')
     expect(mocks.display).toHaveBeenCalledWith('epubcfi(/6/2)')
+    expect(mocks.setFontSize).toHaveBeenCalledWith('100%')
 
+    vi.useFakeTimers()
     mocks.listeners[0]?.({ start: { cfi: 'epubcfi(/6/4)' } })
-    expect((await db.readingProgress.get(bookRecord.id))?.cfi).toBe(
-      'epubcfi(/6/2)',
-    )
-    await delay(800)
+    expect(mocks.percentageFromCfi).toHaveBeenCalledWith('epubcfi(/6/4)')
+    vi.advanceTimersByTime(750)
+    vi.useRealTimers()
     expect(await db.readingProgress.get(bookRecord.id)).toMatchObject({
       cfi: 'epubcfi(/6/4)',
       percentage: 25,

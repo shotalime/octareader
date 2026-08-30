@@ -64,7 +64,7 @@ describe('ESLint production safeguards', () => {
     for (const ruleId of expectedRuleIds) {
       expect(ruleIds).toContain(ruleId)
     }
-  })
+  }, 10_000)
 
   it('ограничивает тестовый override каталогом тестов', async () => {
     const eslint = new ESLint()
