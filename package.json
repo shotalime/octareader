@@ -10,6 +10,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "build": "vue-tsc -b && vite build",
+    "build:pages": "npm run build -- --base=/octareader/ && node scripts/prepare-pages.mjs",
     "typecheck": "vue-tsc -b",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix --max-warnings=0",
