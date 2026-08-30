@@ -58,28 +58,10 @@ const resolveArchivePath = (basePath: string, relativePath: string): string => {
   return baseSegments.join('/')
 }
 
-const assertNoUnsupportedEncryption = async (archive: JSZip): Promise<void> => {
+const assertNoUnsupportedEncryption = (archive: JSZip): void => {
   const encryptionFile = archive.file('META-INF/encryption.xml')
-  if (encryptionFile === null) {
-    return
-  }
-
-  const document = parseXml(await encryptionFile.async('text'))
-  const allowedFontAlgorithms = new Set([
-    'http://www.idpf.org/2008/embedding',
-    'http://ns.adobe.com/pdf/enc#RC',
-  ])
-  const algorithms = elementsByLocalName(document, 'EncryptionMethod').map(
-    (element) => element.getAttribute('Algorithm'),
-  )
-  if (
-    algorithms.length === 0 ||
-    algorithms.some(
-      (algorithm) =>
-        algorithm === null || !allowedFontAlgorithms.has(algorithm),
-    )
-  ) {
-    throw new Error('Unsupported encryption')
+  if (encryptionFile !== null) {
+    throw new Error('Encrypted EPUB resources are unsupported')
   }
 }
 
@@ -90,7 +72,7 @@ const parseEpub = async (content: ArrayBuffer): Promise<ParsedMetadata> => {
     throw new Error('Invalid EPUB mimetype')
   }
 
-  await assertNoUnsupportedEncryption(archive)
+  assertNoUnsupportedEncryption(archive)
   const containerFile = archive.file('META-INF/container.xml')
   if (containerFile === null) {
     throw new Error('Missing container')
@@ -126,6 +108,36 @@ const parseEpub = async (content: ArrayBuffer): Promise<ParsedMetadata> => {
   }
   const author = firstText(packageDocument, 'creator')
   const manifestItems = elementsByLocalName(packageDocument, 'item')
+  const manifestById = new Map(
+    manifestItems.flatMap((item) => {
+      const id = item.getAttribute('id')
+      return id === null ? [] : [[id, item] as const]
+    }),
+  )
+  const spineItems = elementsByLocalName(packageDocument, 'spine').flatMap(
+    (spine) => elementsByLocalName(spine, 'itemref'),
+  )
+  const readableSpineItems = spineItems.filter((itemref) => {
+    const idref = itemref.getAttribute('idref')
+    const manifestItem = idref === null ? undefined : manifestById.get(idref)
+    const href = manifestItem?.getAttribute('href')
+    return (
+      manifestItem?.getAttribute('media-type') === 'application/xhtml+xml' &&
+      href !== null &&
+      href !== undefined &&
+      archive.file(resolveArchivePath(packagePath, href)) !== null
+    )
+  })
+  if (
+    spineItems.length === 0 ||
+    spineItems.some((itemref) => {
+      const idref = itemref.getAttribute('idref')
+      return idref === null || !manifestById.has(idref)
+    }) ||
+    readableSpineItems.length === 0
+  ) {
+    throw new Error('Missing readable spine')
+  }
   const epub3Cover = manifestItems.find((element) =>
     (element.getAttribute('properties') ?? '')
       .split(/\s+/u)

@@ -1,4 +1,20 @@
 import { expect, test } from '@playwright/test'
+import JSZip from 'jszip'
+
+const createEpub = async (): Promise<Buffer> => {
+  const zip = new JSZip()
+  zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
+  zip.file(
+    'META-INF/container.xml',
+    '<container><rootfiles><rootfile full-path="OPS/package.opf"/></rootfiles></container>',
+  )
+  zip.file(
+    'OPS/package.opf',
+    '<package><metadata><title>Книга после перезагрузки</title><creator>Автор</creator></metadata><manifest><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="chapter"/></spine></package>',
+  )
+  zip.file('OPS/chapter.xhtml', '<html><body><p>Text</p></body></html>')
+  return zip.generateAsync({ type: 'nodebuffer' })
+}
 
 const directRoutes = [
   { path: '/', heading: 'Книги' },
@@ -65,4 +81,58 @@ test('manifest содержит данные для установки', async (
   expect(manifest).toContain('OctaReader')
   expect(manifest).toContain('standalone')
   expect(manifest).toContain('maskable-icon-512x512.png')
+})
+
+test('импортированная книга и EPUB остаются после перезагрузки', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(
+    browserName === 'webkit',
+    'Playwright WebKit disables crypto.subtle on the HTTP preview origin',
+  )
+  const epub = await createEpub()
+  await page.goto('/')
+  await page.getByTestId('epub-input').setInputFiles({
+    name: 'reload.epub',
+    mimeType: 'application/epub+zip',
+    buffer: epub,
+  })
+
+  await expect(page.getByText('Книга после перезагрузки')).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Книга после перезагрузки')).toBeVisible()
+  const storedFile = await page.evaluate(async () => {
+    const request = indexedDB.open('octareader')
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () =>
+        reject(request.error ?? new Error('Failed to open IndexedDB'))
+    })
+    const file = await new Promise<Blob | undefined>((resolve, reject) => {
+      const fileRequest = db.transaction('epubFiles').objectStore('epubFiles')
+        .getAll() as IDBRequest<unknown[]>
+      fileRequest.onsuccess = () => {
+        const record = fileRequest.result[0]
+        resolve(
+          typeof record === 'object' &&
+            record !== null &&
+            'file' in record &&
+            record.file instanceof Blob
+            ? record.file
+            : undefined,
+        )
+      }
+      fileRequest.onerror = () =>
+        reject(fileRequest.error ?? new Error('Failed to read stored EPUB'))
+    })
+    db.close()
+    return file === undefined
+      ? null
+      : { size: file.size, type: file.type }
+  })
+  expect(storedFile).toEqual({
+    size: epub.byteLength,
+    type: 'application/epub+zip',
+  })
 })
