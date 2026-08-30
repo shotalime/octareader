@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LoaderCircle, RotateCcw, X } from '@lucide/vue'
+import { Check, LoaderCircle, RotateCcw, X } from '@lucide/vue'
 
 import { Button } from '@/components/ui/button'
 import type { PartOfSpeech, TranslationResult } from '@/domain/ai/provider'
@@ -14,6 +14,8 @@ defineProps<{
   result: TranslationResult | null
   errorMessage: string | null
   fromCache: boolean
+  isSaving: boolean
+  isSaved: boolean
 }>()
 
 const sourceLanguage = defineModel<string>('sourceLanguage', {
@@ -27,6 +29,7 @@ defineEmits<{
   close: []
   retry: []
   saveLanguages: []
+  save: []
 }>()
 
 const languages = [
@@ -166,6 +169,12 @@ const partOfSpeechLabels: Record<PartOfSpeech, string> = {
             </dd>
           </div>
         </dl>
+        <Button :disabled="isSaving || isSaved" @click="$emit('save')">
+          <Check v-if="isSaved" aria-hidden="true" />
+          {{
+            isSaved ? 'Сохранено' : isSaving ? 'Сохраняем…' : 'Сохранить слово'
+          }}
+        </Button>
       </template>
       <p v-else-if="result.status === 'proper_noun'" class="font-medium">
         Имя собственное — перевод не требуется

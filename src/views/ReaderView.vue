@@ -27,6 +27,7 @@ import {
 import { settingsRepository } from '@/domain/settings'
 import type { TappedText } from '@/domain/text-selection'
 import { translationService } from '@/domain/translation'
+import { vocabularyService } from '@/domain/vocabulary'
 
 type TranslationPopupStatus =
   'needs-languages' | 'loading' | 'success' | 'error'
@@ -48,9 +49,13 @@ const translationFromCache = ref(false)
 const sourceLanguage = ref('en')
 const targetLanguage = ref('ru')
 const hasBookLanguages = ref(false)
+const currentCfi = ref<string | null>(null)
+const isSavingVocabulary = ref(false)
+const isVocabularySaved = ref(false)
 let translationRequestId = 0
 
 const updateReaderState = (state: ReaderState): void => {
+  currentCfi.value = state.cfi
   progressPercentage.value = state.progressPercentage
   isProgressCalculating.value = state.isProgressCalculating
 }
@@ -86,6 +91,7 @@ const translateTappedText = async (): Promise<void> => {
   translationResult.value = null
   translationErrorMessage.value = null
   translationFromCache.value = false
+  isVocabularySaved.value = false
   try {
     const outcome = await translationService.translate({
       sourceText: selection.word,
@@ -132,6 +138,42 @@ const closeTranslation = (): void => {
   tappedText.value = null
   translationResult.value = null
   translationErrorMessage.value = null
+}
+
+const saveVocabulary = async (): Promise<void> => {
+  const result = translationResult.value
+  const selection = tappedText.value
+  const bookId = route.params.bookId
+  if (
+    result?.status !== 'translated' ||
+    result.translation === null ||
+    selection === null ||
+    typeof bookId !== 'string' ||
+    session.value === null
+  )
+    return
+  isSavingVocabulary.value = true
+  try {
+    await vocabularyService.save({
+      sourceText: selection.word,
+      lemma: result.lemma,
+      partOfSpeech: result.partOfSpeech,
+      translation: result.translation,
+      sentence: selection.sentence,
+      sourceLanguage: sourceLanguage.value,
+      targetLanguage: targetLanguage.value,
+      bookId,
+      bookTitle: session.value.title,
+      cfi: currentCfi.value,
+    })
+    isVocabularySaved.value = true
+  } catch {
+    translationErrorMessage.value =
+      'Не удалось сохранить слово. Попробуйте ещё раз.'
+    translationStatus.value = 'error'
+  } finally {
+    isSavingVocabulary.value = false
+  }
 }
 
 onMounted(async () => {
@@ -290,9 +332,12 @@ onBeforeUnmount(() => void session.value?.destroy())
           :result="translationResult"
           :error-message="translationErrorMessage"
           :from-cache="translationFromCache"
+          :is-saving="isSavingVocabulary"
+          :is-saved="isVocabularySaved"
           @close="closeTranslation"
           @retry="translateTappedText"
           @save-languages="saveBookLanguages"
+          @save="saveVocabulary"
         />
       </div>
 

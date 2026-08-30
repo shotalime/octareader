@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   goTo: vi.fn(),
   translate: vi.fn(),
   saveBookLanguages: vi.fn(),
+  saveVocabulary: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -28,6 +29,9 @@ vi.mock('@/domain/settings', () => ({
 }))
 vi.mock('@/domain/translation', () => ({
   translationService: { translate: mocks.translate },
+}))
+vi.mock('@/domain/vocabulary', () => ({
+  vocabularyService: { save: mocks.saveVocabulary },
 }))
 
 beforeEach(() => {
@@ -76,6 +80,7 @@ beforeEach(() => {
     fromCache: false,
   })
   mocks.saveBookLanguages.mockResolvedValue(undefined)
+  mocks.saveVocabulary.mockResolvedValue(undefined)
 })
 
 describe('ReaderView', () => {
@@ -188,6 +193,37 @@ describe('ReaderView', () => {
     await flushPromises()
     expect(mocks.saveBookLanguages).toHaveBeenCalledWith('book-1', 'de', 'ru')
     expect(mocks.translate).toHaveBeenCalledOnce()
+  })
+
+  it('сохраняет переведённое слово с книгой и текущим CFI', async () => {
+    const wrapper = mount(ReaderView)
+    await flushPromises()
+    const onState = mocks.open.mock.calls[0]?.[2] as (state: object) => void
+    const onTextTap = mocks.open.mock.calls[0]?.[3] as (selection: {
+      word: string
+      sentence: string | null
+    }) => void
+    onState({
+      cfi: 'epubcfi(/6/2)',
+      progressPercentage: 10,
+      isProgressCalculating: false,
+    })
+    onTextTap({ word: 'running', sentence: 'She is running home.' })
+    await flushPromises()
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Сохранить слово'))
+      ?.trigger('click')
+    await flushPromises()
+    expect(mocks.saveVocabulary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lemma: 'run',
+        bookId: 'book-1',
+        bookTitle: 'Тестовая книга',
+        cfi: 'epubcfi(/6/2)',
+      }),
+    )
+    expect(wrapper.text()).toContain('Сохранено')
   })
 
   it('показывает санитизированную ошибку и выполняет только ручной повтор', async () => {

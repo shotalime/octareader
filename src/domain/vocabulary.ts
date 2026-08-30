@@ -1,0 +1,123 @@
+import { database, type OctaReaderDatabase } from '@/data/database'
+import type {
+  ReviewSchedule,
+  VocabularyContext,
+  VocabularyEntry,
+} from '@/data/models'
+import type { PartOfSpeech } from '@/domain/ai/provider'
+
+export type SaveVocabularyInput = {
+  sourceText: string
+  lemma: string | null
+  partOfSpeech: PartOfSpeech
+  translation: string
+  sentence: string | null
+  sourceLanguage: string
+  targetLanguage: string
+  bookId: string
+  bookTitle: string
+  cfi: string | null
+}
+
+const normalizeIdentityPart = (value: string): string =>
+  value.normalize('NFKC').trim().toLocaleLowerCase()
+
+export const vocabularyIdentityKey = (
+  lemmaOrSourceText: string,
+  partOfSpeech: PartOfSpeech,
+  sourceLanguage: string,
+  targetLanguage: string,
+): string =>
+  JSON.stringify([
+    normalizeIdentityPart(lemmaOrSourceText),
+    partOfSpeech,
+    normalizeIdentityPart(sourceLanguage),
+    normalizeIdentityPart(targetLanguage),
+  ])
+
+const sameContext = (
+  context: VocabularyContext,
+  input: SaveVocabularyInput,
+): boolean =>
+  context.sourceText === input.sourceText &&
+  context.translation === input.translation &&
+  context.sentence === input.sentence &&
+  context.bookId === input.bookId &&
+  context.cfi === input.cfi
+
+export class VocabularyService {
+  constructor(private readonly db: OctaReaderDatabase = database) {}
+
+  async save(input: SaveVocabularyInput): Promise<VocabularyEntry> {
+    const lemma = input.lemma?.trim() || input.sourceText.trim()
+    const identityKey = vocabularyIdentityKey(
+      lemma,
+      input.partOfSpeech,
+      input.sourceLanguage,
+      input.targetLanguage,
+    )
+
+    return this.db.transaction(
+      'rw',
+      [
+        this.db.vocabularyEntries,
+        this.db.vocabularyContexts,
+        this.db.reviewSchedules,
+      ],
+      async () => {
+        const now = Date.now()
+        let entry = await this.db.vocabularyEntries
+          .where('identityKey')
+          .equals(identityKey)
+          .first()
+
+        if (entry === undefined) {
+          entry = {
+            id: crypto.randomUUID(),
+            identityKey,
+            lemma,
+            partOfSpeech: input.partOfSpeech,
+            sourceLanguage: input.sourceLanguage,
+            targetLanguage: input.targetLanguage,
+            createdAt: now,
+            updatedAt: now,
+          }
+          const schedule: ReviewSchedule = {
+            vocabularyEntryId: entry.id,
+            intervalDays: 0,
+            dueAt: now,
+            lastReviewedAt: null,
+            reviewCount: 0,
+            lapseCount: 0,
+          }
+          await this.db.vocabularyEntries.add(entry)
+          await this.db.reviewSchedules.add(schedule)
+        }
+
+        const contexts = await this.db.vocabularyContexts
+          .where('vocabularyEntryId')
+          .equals(entry.id)
+          .toArray()
+        if (!contexts.some((context) => sameContext(context, input))) {
+          await this.db.vocabularyContexts.add({
+            id: crypto.randomUUID(),
+            vocabularyEntryId: entry.id,
+            sourceText: input.sourceText,
+            translation: input.translation,
+            sentence: input.sentence,
+            bookId: input.bookId,
+            bookTitle: input.bookTitle,
+            cfi: input.cfi,
+            createdAt: now,
+          })
+          entry = { ...entry, updatedAt: now }
+          await this.db.vocabularyEntries.put(entry)
+        }
+
+        return entry
+      },
+    )
+  }
+}
+
+export const vocabularyService = new VocabularyService()
