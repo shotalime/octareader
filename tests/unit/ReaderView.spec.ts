@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   previousChapter: vi.fn(),
   destroy: vi.fn(),
   goTo: vi.fn(),
+  translate: vi.fn(),
+  saveBookLanguages: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -21,12 +23,25 @@ vi.mock('@/domain/reader', () => ({
     'Не удалось открыть книгу. Возможно, файл повреждён или имеет неподдерживаемый формат.',
   readerService: { open: mocks.open },
 }))
+vi.mock('@/domain/settings', () => ({
+  settingsRepository: { saveBookLanguages: mocks.saveBookLanguages },
+}))
+vi.mock('@/domain/translation', () => ({
+  translationService: { translate: mocks.translate },
+}))
 
 beforeEach(() => {
   Object.values(mocks).forEach((mock) => mock.mockReset())
   mocks.open.mockResolvedValue({
     title: 'Тестовая книга',
     author: 'Автор',
+    bookLanguages: {
+      bookId: 'book-1',
+      sourceLanguage: 'en',
+      targetLanguage: 'ru',
+      updatedAt: 1,
+    },
+    suggestedSourceLanguage: 'en',
     nextPage: mocks.nextPage,
     previousPage: mocks.previousPage,
     nextChapter: mocks.nextChapter,
@@ -49,6 +64,18 @@ beforeEach(() => {
     ],
     goTo: mocks.goTo,
   })
+  mocks.translate.mockResolvedValue({
+    result: {
+      schemaVersion: 1,
+      status: 'translated',
+      sourceText: 'running',
+      lemma: 'run',
+      partOfSpeech: 'verb',
+      translation: 'бежит',
+    },
+    fromCache: false,
+  })
+  mocks.saveBookLanguages.mockResolvedValue(undefined)
 })
 
 describe('ReaderView', () => {
@@ -66,6 +93,8 @@ describe('ReaderView', () => {
     mocks.open.mockResolvedValue({
       title: 'Без оглавления',
       author: null,
+      bookLanguages: null,
+      suggestedSourceLanguage: 'en',
       nextPage: mocks.nextPage,
       previousPage: mocks.previousPage,
       nextChapter: mocks.nextChapter,
@@ -112,5 +141,86 @@ describe('ReaderView', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain(
       'Не удалось открыть книгу',
     )
+  })
+
+  it('переводит слово из EPUB и показывает контекстный результат', async () => {
+    const wrapper = mount(ReaderView)
+    await flushPromises()
+    const onTextTap = mocks.open.mock.calls[0]?.[3] as
+      | ((selection: { word: string; sentence: string | null }) => void)
+      | undefined
+    onTextTap?.({ word: 'running', sentence: 'She is running home.' })
+    await flushPromises()
+
+    expect(mocks.translate).toHaveBeenCalledWith({
+      sourceText: 'running',
+      sentence: 'She is running home.',
+      sourceLanguage: 'en',
+      targetLanguage: 'ru',
+    })
+    expect(wrapper.text()).toContain('бежит')
+    expect(wrapper.text()).toContain('run')
+    expect(wrapper.text()).toContain('глагол')
+    expect(wrapper.text()).toContain('She is running home.')
+  })
+
+  it('просит выбрать языки книги перед первым переводом', async () => {
+    mocks.open.mockResolvedValue({
+      ...(await mocks.open()),
+      bookLanguages: null,
+      suggestedSourceLanguage: 'de',
+    })
+    mocks.open.mockClear()
+    const wrapper = mount(ReaderView)
+    await flushPromises()
+    const onTextTap = mocks.open.mock.calls[0]?.[3] as
+      | ((selection: { word: string; sentence: string | null }) => void)
+      | undefined
+    onTextTap?.({ word: 'läuft', sentence: null })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Укажите направление перевода')
+    expect(mocks.translate).not.toHaveBeenCalled()
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Сохранить и перевести'))
+      ?.trigger('click')
+    await flushPromises()
+    expect(mocks.saveBookLanguages).toHaveBeenCalledWith('book-1', 'de', 'ru')
+    expect(mocks.translate).toHaveBeenCalledOnce()
+  })
+
+  it('показывает санитизированную ошибку и выполняет только ручной повтор', async () => {
+    mocks.translate
+      .mockRejectedValueOnce(new Error('provider response with secret details'))
+      .mockResolvedValueOnce({
+        result: {
+          schemaVersion: 1,
+          status: 'proper_noun',
+          sourceText: 'London',
+          lemma: 'London',
+          partOfSpeech: 'noun',
+          translation: null,
+        },
+        fromCache: false,
+      })
+    const wrapper = mount(ReaderView)
+    await flushPromises()
+    const onTextTap = mocks.open.mock.calls[0]?.[3] as
+      | ((selection: { word: string; sentence: string | null }) => void)
+      | undefined
+    onTextTap?.({ word: 'London', sentence: 'London is large.' })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Не удалось получить перевод')
+    expect(wrapper.text()).not.toContain('secret details')
+    expect(mocks.translate).toHaveBeenCalledOnce()
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Повторить'))
+      ?.trigger('click')
+    await flushPromises()
+    expect(mocks.translate).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Имя собственное — перевод не требуется')
   })
 })

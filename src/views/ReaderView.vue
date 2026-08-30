@@ -14,14 +14,22 @@ import { useRoute } from 'vue-router'
 
 import PageHeader from '@/components/PageHeader.vue'
 import ReaderTocList from '@/components/ReaderTocList.vue'
+import TranslationPopup from '@/components/TranslationPopup.vue'
 import { Button } from '@/components/ui/button'
+import { type TranslationResult } from '@/domain/ai/provider'
+import { aiErrorMessage } from '@/domain/api-key'
 import {
   READER_ERROR_MESSAGE,
   readerService,
   type ReaderSession,
   type ReaderState,
 } from '@/domain/reader'
+import { settingsRepository } from '@/domain/settings'
 import type { TappedText } from '@/domain/text-selection'
+import { translationService } from '@/domain/translation'
+
+type TranslationPopupStatus =
+  'needs-languages' | 'loading' | 'success' | 'error'
 
 const route = useRoute()
 const viewport = ref<HTMLElement | null>(null)
@@ -33,6 +41,14 @@ const isTableOfContentsOpen = ref(false)
 const progressPercentage = ref<number | null>(null)
 const isProgressCalculating = ref(true)
 const tappedText = ref<TappedText | null>(null)
+const translationStatus = ref<TranslationPopupStatus>('loading')
+const translationResult = ref<TranslationResult | null>(null)
+const translationErrorMessage = ref<string | null>(null)
+const translationFromCache = ref(false)
+const sourceLanguage = ref('en')
+const targetLanguage = ref('ru')
+const hasBookLanguages = ref(false)
+let translationRequestId = 0
 
 const updateReaderState = (state: ReaderState): void => {
   progressPercentage.value = state.progressPercentage
@@ -58,19 +74,84 @@ const goToTableOfContentsItem = async (href: string): Promise<void> => {
   if (errorMessage.value === null) isTableOfContentsOpen.value = false
 }
 
+const translateTappedText = async (): Promise<void> => {
+  const selection = tappedText.value
+  if (selection === null) return
+  if (!hasBookLanguages.value) {
+    translationStatus.value = 'needs-languages'
+    return
+  }
+  const requestId = ++translationRequestId
+  translationStatus.value = 'loading'
+  translationResult.value = null
+  translationErrorMessage.value = null
+  translationFromCache.value = false
+  try {
+    const outcome = await translationService.translate({
+      sourceText: selection.word,
+      sentence: selection.sentence,
+      sourceLanguage: sourceLanguage.value,
+      targetLanguage: targetLanguage.value,
+    })
+    if (requestId !== translationRequestId) return
+    translationResult.value = outcome.result
+    translationFromCache.value = outcome.fromCache
+    translationStatus.value = 'success'
+  } catch (error: unknown) {
+    if (requestId !== translationRequestId) return
+    translationErrorMessage.value = aiErrorMessage(error)
+    translationStatus.value = 'error'
+  }
+}
+
+const handleTextTap = (selection: TappedText): void => {
+  tappedText.value = selection
+  void translateTappedText()
+}
+
+const saveBookLanguages = async (): Promise<void> => {
+  const bookId = route.params.bookId
+  if (typeof bookId !== 'string') return
+  try {
+    await settingsRepository.saveBookLanguages(
+      bookId,
+      sourceLanguage.value,
+      targetLanguage.value,
+    )
+    hasBookLanguages.value = true
+    await translateTappedText()
+  } catch {
+    translationErrorMessage.value =
+      'Не удалось сохранить языки книги. Попробуйте ещё раз.'
+    translationStatus.value = 'error'
+  }
+}
+
+const closeTranslation = (): void => {
+  translationRequestId += 1
+  tappedText.value = null
+  translationResult.value = null
+  translationErrorMessage.value = null
+}
+
 onMounted(async () => {
   const bookId = route.params.bookId
   if (typeof bookId !== 'string' || viewport.value === null) return
   isLoading.value = true
   try {
-    session.value = await readerService.open(
+    const openedSession = await readerService.open(
       bookId,
       viewport.value,
       updateReaderState,
-      (selection) => {
-        tappedText.value = selection
-      },
+      handleTextTap,
     )
+    session.value = openedSession
+    sourceLanguage.value =
+      openedSession.bookLanguages?.sourceLanguage ??
+      openedSession.suggestedSourceLanguage
+    targetLanguage.value = openedSession.bookLanguages?.targetLanguage ?? 'ru'
+    hasBookLanguages.value = openedSession.bookLanguages !== null
+    if (tappedText.value !== null) void translateTappedText()
   } catch {
     errorMessage.value = READER_ERROR_MESSAGE
   } finally {
@@ -200,6 +281,19 @@ onBeforeUnmount(() => void session.value?.destroy())
         >
           Откройте книгу из библиотеки — она доступна для чтения без интернета.
         </p>
+        <TranslationPopup
+          v-if="tappedText"
+          v-model:source-language="sourceLanguage"
+          v-model:target-language="targetLanguage"
+          :selection="tappedText"
+          :status="translationStatus"
+          :result="translationResult"
+          :error-message="translationErrorMessage"
+          :from-cache="translationFromCache"
+          @close="closeTranslation"
+          @retry="translateTappedText"
+          @save-languages="saveBookLanguages"
+        />
       </div>
 
       <div class="flex items-center justify-between px-4 py-3 text-white">
@@ -225,22 +319,6 @@ onBeforeUnmount(() => void session.value?.destroy())
           >Вперёд <ArrowRight aria-hidden="true"
         /></Button>
       </div>
-    </div>
-    <div
-      v-if="tappedText"
-      class="mt-4 rounded-2xl border bg-card p-4"
-      role="status"
-      aria-live="polite"
-    >
-      <p
-        class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-      >
-        Выбранное слово
-      </p>
-      <p class="mt-1 font-serif text-xl font-semibold">{{ tappedText.word }}</p>
-      <p v-if="tappedText.sentence" class="mt-2 text-sm text-muted-foreground">
-        {{ tappedText.sentence }}
-      </p>
     </div>
   </section>
 </template>

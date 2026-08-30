@@ -4,7 +4,7 @@ import type Rendition from 'epubjs/types/rendition'
 import type { NavItem } from 'epubjs/types/navigation'
 
 import { database, type OctaReaderDatabase } from '@/data/database'
-import type { ReadingProgress } from '@/data/models'
+import type { BookSetting, ReadingProgress } from '@/data/models'
 import { registerEpubTapDetection } from '@/domain/epub-tap'
 import {
   SettingsRepository,
@@ -18,6 +18,8 @@ export const READER_ERROR_MESSAGE =
 export type ReaderSession = {
   title: string
   author: string | null
+  bookLanguages: BookSetting | null
+  suggestedSourceLanguage: string
   nextPage: () => Promise<void>
   previousPage: () => Promise<void>
   nextChapter: () => Promise<void>
@@ -108,6 +110,28 @@ const loadTableOfContents = async (
   } catch {
     return []
   }
+}
+
+const suggestedBookLanguage = (value: string | undefined): string => {
+  const baseLanguage = value?.split('-')[0]?.toLocaleLowerCase()
+  return baseLanguage !== undefined &&
+    [
+      'en',
+      'ru',
+      'de',
+      'fr',
+      'es',
+      'it',
+      'pt',
+      'pl',
+      'uk',
+      'tr',
+      'ja',
+      'ko',
+      'zh',
+    ].includes(baseLanguage)
+    ? baseLanguage
+    : 'en'
 }
 
 const chapterHref = (
@@ -226,6 +250,9 @@ export class ReaderService {
 
     const openedBook = book
     const openedRendition = rendition
+    const suggestedSourceLanguage = suggestedBookLanguage(
+      book.packaging.metadata.language,
+    )
     const renditionEvents = openedRendition as unknown as RenditionEvents
     let latestCfi = savedProgress?.cfi ?? null
     let pendingProgress: ReadingProgress | null = null
@@ -305,6 +332,8 @@ export class ReaderService {
     return {
       title: bookRecord.title,
       author: bookRecord.author,
+      bookLanguages: bookLanguages ?? null,
+      suggestedSourceLanguage,
       nextPage: async () => openedRendition.next(),
       previousPage: async () => openedRendition.prev(),
       nextChapter: async () => displayChapter(1),
