@@ -79,6 +79,7 @@ describe('ReaderView', () => {
     expect(mocks.open).toHaveBeenCalledWith(
       'book-1',
       wrapper.get('[data-testid="reader-viewport"]').element,
+      expect.any(Function),
     )
     expect(wrapper.text()).toContain('Тестовая книга')
     await wrapper.get('button[aria-label="Следующая глава"]').trigger('click')

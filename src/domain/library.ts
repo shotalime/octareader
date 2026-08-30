@@ -1,13 +1,20 @@
 import { database, type OctaReaderDatabase } from '@/data/database'
 import type { Book } from '@/data/models'
 import { BookImportService, type BookImportResult } from '@/domain/book-import'
+import { readerService, type ReaderService } from '@/domain/reader'
 
 export type LibraryBook = Book & { progressPercentage: number | null }
 
 export class LibraryService {
   private readonly importer: BookImportService
 
-  constructor(private readonly db: OctaReaderDatabase = database) {
+  constructor(
+    private readonly db: OctaReaderDatabase = database,
+    private readonly reader: Pick<
+      ReaderService,
+      'prepareLocations'
+    > = readerService,
+  ) {
     this.importer = new BookImportService(db)
   }
 
@@ -23,7 +30,11 @@ export class LibraryService {
   }
 
   async importBook(file: File): Promise<BookImportResult> {
-    return this.importer.import(file)
+    const result = await this.importer.import(file)
+    if (result.status === 'imported') {
+      void this.reader.prepareLocations(result.book.id)
+    }
+    return result
   }
 
   async deleteBook(bookId: string): Promise<void> {

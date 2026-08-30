@@ -19,6 +19,7 @@ import {
   READER_ERROR_MESSAGE,
   readerService,
   type ReaderSession,
+  type ReaderState,
 } from '@/domain/reader'
 
 const route = useRoute()
@@ -28,6 +29,13 @@ const isLoading = ref(false)
 const isNavigating = ref(false)
 const errorMessage = ref<string | null>(null)
 const isTableOfContentsOpen = ref(false)
+const progressPercentage = ref<number | null>(null)
+const isProgressCalculating = ref(true)
+
+const updateReaderState = (state: ReaderState): void => {
+  progressPercentage.value = state.progressPercentage
+  isProgressCalculating.value = state.isProgressCalculating
+}
 
 const runNavigation = async (
   action: (reader: ReaderSession) => Promise<void>,
@@ -53,7 +61,11 @@ onMounted(async () => {
   if (typeof bookId !== 'string' || viewport.value === null) return
   isLoading.value = true
   try {
-    session.value = await readerService.open(bookId, viewport.value)
+    session.value = await readerService.open(
+      bookId,
+      viewport.value,
+      updateReaderState,
+    )
   } catch {
     errorMessage.value = READER_ERROR_MESSAGE
   } finally {
@@ -61,7 +73,7 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(() => session.value?.destroy())
+onBeforeUnmount(() => void session.value?.destroy())
 </script>
 
 <template>
@@ -184,7 +196,11 @@ onBeforeUnmount(() => session.value?.destroy())
           ><ArrowLeft aria-hidden="true" /> Назад</Button
         >
         <span class="text-xs text-white/60">{{
-          session ? 'Локальная книга' : 'Книга не выбрана'
+          !session
+            ? 'Книга не выбрана'
+            : isProgressCalculating
+              ? 'Прогресс рассчитывается'
+              : `${Math.round(progressPercentage ?? 0)}%`
         }}</span>
         <Button
           variant="ghost"
