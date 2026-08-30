@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     vue(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: [
         'favicon.ico',
         'icon.svg',
@@ -50,7 +50,7 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true,
+        skipWaiting: false,
         navigateFallback: 'index.html',
         globPatterns: ['**/*.{js,css,html,svg,png}'],
       },

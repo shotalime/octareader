@@ -8,6 +8,8 @@ import {
   Sparkles,
 } from '@lucide/vue'
 
+import PwaUpdateNotice from '@/components/PwaUpdateNotice.vue'
+
 const navigationItems = [
   { to: '/', label: 'Библиотека', icon: LibraryBig },
   { to: '/reader', label: 'Читалка', icon: BookOpenText },
@@ -19,6 +21,7 @@ const navigationItems = [
 
 <template>
   <div class="min-h-dvh bg-background text-foreground">
+    <PwaUpdateNotice />
     <a
       href="#main-content"
       class="fixed left-4 top-4 z-50 -translate-y-24 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
