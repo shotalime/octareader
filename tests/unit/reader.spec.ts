@@ -83,6 +83,9 @@ beforeEach(() => {
         fontSize: mocks.setFontSize,
         font: mocks.setFont,
       },
+      hooks: {
+        content: { register: vi.fn(), deregister: vi.fn() },
+      },
       on: (_event: string, listener: RelocatedListener) =>
         mocks.listeners.push(listener),
       off: (_event: string, listener: RelocatedListener) => {
@@ -91,6 +94,7 @@ beforeEach(() => {
       },
     }),
     spine: { get: () => ({ href: 'chapter.xhtml' }) },
+    packaging: { metadata: { language: 'en' } },
     destroy: mocks.destroyBook,
   })
 })

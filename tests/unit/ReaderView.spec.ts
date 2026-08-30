@@ -94,6 +94,7 @@ describe('ReaderView', () => {
       'book-1',
       wrapper.get('[data-testid="reader-viewport"]').element,
       expect.any(Function),
+      expect.any(Function),
     )
     expect(wrapper.text()).toContain('Тестовая книга')
     await wrapper.get('button[aria-label="Следующая глава"]').trigger('click')

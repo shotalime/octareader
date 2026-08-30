@@ -21,6 +21,7 @@ import {
   type ReaderSession,
   type ReaderState,
 } from '@/domain/reader'
+import type { TappedText } from '@/domain/text-selection'
 
 const route = useRoute()
 const viewport = ref<HTMLElement | null>(null)
@@ -31,6 +32,7 @@ const errorMessage = ref<string | null>(null)
 const isTableOfContentsOpen = ref(false)
 const progressPercentage = ref<number | null>(null)
 const isProgressCalculating = ref(true)
+const tappedText = ref<TappedText | null>(null)
 
 const updateReaderState = (state: ReaderState): void => {
   progressPercentage.value = state.progressPercentage
@@ -65,6 +67,9 @@ onMounted(async () => {
       bookId,
       viewport.value,
       updateReaderState,
+      (selection) => {
+        tappedText.value = selection
+      },
     )
   } catch {
     errorMessage.value = READER_ERROR_MESSAGE
@@ -220,6 +225,22 @@ onBeforeUnmount(() => void session.value?.destroy())
           >Вперёд <ArrowRight aria-hidden="true"
         /></Button>
       </div>
+    </div>
+    <div
+      v-if="tappedText"
+      class="mt-4 rounded-2xl border bg-card p-4"
+      role="status"
+      aria-live="polite"
+    >
+      <p
+        class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+      >
+        Выбранное слово
+      </p>
+      <p class="mt-1 font-serif text-xl font-semibold">{{ tappedText.word }}</p>
+      <p v-if="tappedText.sentence" class="mt-2 text-sm text-muted-foreground">
+        {{ tappedText.sentence }}
+      </p>
     </div>
   </section>
 </template>

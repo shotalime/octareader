@@ -5,10 +5,12 @@ import type { NavItem } from 'epubjs/types/navigation'
 
 import { database, type OctaReaderDatabase } from '@/data/database'
 import type { ReadingProgress } from '@/data/models'
+import { registerEpubTapDetection } from '@/domain/epub-tap'
 import {
   SettingsRepository,
   type ReaderAppearanceSettings,
 } from '@/domain/settings'
+import type { TappedText } from '@/domain/text-selection'
 
 export const READER_ERROR_MESSAGE =
   'Не удалось открыть книгу. Возможно, файл повреждён или имеет неподдерживаемый формат.'
@@ -165,6 +167,7 @@ export class ReaderService {
     bookId: string,
     element: HTMLElement,
     onState: (state: ReaderState) => void = () => undefined,
+    onTextTap: (selection: TappedText) => void = () => undefined,
   ): Promise<ReaderSession> {
     const [bookRecord, fileRecord] = await Promise.all([
       this.db.books.get(bookId),
@@ -174,14 +177,17 @@ export class ReaderService {
       throw new Error(READER_ERROR_MESSAGE)
     }
 
-    const [savedLocations, savedProgress, appearance] = await Promise.all([
-      this.db.locations.get(bookId),
-      this.db.readingProgress.get(bookId),
-      this.settings.getReaderAppearance(),
-    ])
+    const [savedLocations, savedProgress, appearance, bookLanguages] =
+      await Promise.all([
+        this.db.locations.get(bookId),
+        this.db.readingProgress.get(bookId),
+        this.settings.getReaderAppearance(),
+        this.settings.getBookLanguages(bookId),
+      ])
 
     let book: Book | null = null
     let rendition: Rendition | null = null
+    let removeTapDetection = (): void => undefined
     try {
       book = ePub(await fileRecord.file.arrayBuffer())
       await book.opened
@@ -199,12 +205,20 @@ export class ReaderService {
         spread: 'auto',
       })
       applyAppearance(rendition, appearance)
+      removeTapDetection = registerEpubTapDetection(
+        rendition,
+        bookLanguages?.sourceLanguage ||
+          book.packaging.metadata.language ||
+          'und',
+        onTextTap,
+      )
       try {
         await rendition.display(savedProgress?.cfi)
       } catch {
         await rendition.display()
       }
     } catch {
+      removeTapDetection()
       rendition?.destroy()
       book?.destroy()
       throw new Error(READER_ERROR_MESSAGE)
@@ -302,6 +316,7 @@ export class ReaderService {
         active = false
         renditionEvents.off('relocated', relocated)
         document.removeEventListener('visibilitychange', visibilityChanged)
+        removeTapDetection()
         await flushProgress()
         openedRendition.destroy()
         openedBook.destroy()

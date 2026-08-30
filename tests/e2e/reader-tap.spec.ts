@@ -1,0 +1,83 @@
+import { expect, test } from '@playwright/test'
+import JSZip from 'jszip'
+
+const createEpub = async (): Promise<Buffer> => {
+  const zip = new JSZip()
+  zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
+  zip.file(
+    'META-INF/container.xml',
+    '<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0"><rootfiles><rootfile full-path="OPS/package.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+  )
+  zip.file(
+    'OPS/package.opf',
+    '<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="id">tap-test</dc:identifier><dc:title>Tap test</dc:title><dc:language>en</dc:language></metadata><manifest><item id="chapter" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="chapter"/></spine></package>',
+  )
+  zip.file(
+    'OPS/chapter.xhtml',
+    '<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Chapter</title></head><body><p>Earlier sentence. The mother-in-law arrived!</p></body></html>',
+  )
+  return zip.generateAsync({ type: 'nodebuffer' })
+}
+
+test('tap inside the EPUB document detects a word and sentence', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(
+    browserName === 'webkit',
+    'Playwright WebKit fails to persist the EPUB Blob in IndexedDB on the HTTP preview origin',
+  )
+  await page.addInitScript(() => {
+    if (globalThis.crypto.subtle === undefined) {
+      Object.defineProperty(globalThis.crypto, 'subtle', {
+        configurable: true,
+        value: {
+          digest: () => Promise.resolve(new Uint8Array(32).buffer),
+        },
+      })
+    }
+  })
+  const epub = await createEpub()
+  await page.goto('/')
+  await expect(page.getByText('Библиотека пока пуста')).toBeVisible()
+  await page.getByTestId('epub-input').setInputFiles({
+    name: 'tap-test.epub',
+    mimeType: 'application/epub+zip',
+    buffer: epub,
+  })
+  await expect(page.getByText('Tap test')).toBeVisible()
+  await page.getByRole('link', { name: 'Открыть' }).click()
+  const iframe = page.locator('[data-testid="reader-viewport"] iframe')
+  await expect(iframe).toBeVisible()
+  const readerFrame = page.frames().find((frame) => frame !== page.mainFrame())
+  if (readerFrame === undefined) throw new Error('EPUB iframe was not created')
+
+  await readerFrame.evaluate(() => {
+    const paragraph = document.querySelector('p')
+    const node = paragraph?.firstChild
+    if (!(node instanceof Text) || paragraph === null) {
+      throw new Error('EPUB paragraph was not rendered')
+    }
+    const start = node.data.indexOf('mother-in-law')
+    const range = document.createRange()
+    range.setStart(node, start + 2)
+    range.setEnd(node, start + 3)
+    const rect = range.getBoundingClientRect()
+    const eventOptions = {
+      bubbles: true,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    }
+    if ('PointerEvent' in window) {
+      paragraph.dispatchEvent(new PointerEvent('pointerdown', eventOptions))
+      paragraph.dispatchEvent(new PointerEvent('pointerup', eventOptions))
+    } else {
+      paragraph.dispatchEvent(new MouseEvent('click', eventOptions))
+    }
+  })
+
+  await expect(page.getByText('mother-in-law', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('The mother-in-law arrived!', { exact: true }),
+  ).toBeVisible()
+})
