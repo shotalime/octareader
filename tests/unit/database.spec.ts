@@ -49,6 +49,7 @@ describe('OctaReaderDatabase', () => {
       contentHash: 'sha256-content',
       title: 'Test Book',
       author: null,
+      cover: null,
       coverMediaType: null,
       createdAt: 1,
       updatedAt: 1,

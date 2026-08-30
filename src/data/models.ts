@@ -5,6 +5,7 @@ export type Book = {
   contentHash: string
   title: string
   author: string | null
+  cover: Blob | null
   coverMediaType: string | null
   createdAt: number
   updatedAt: number
