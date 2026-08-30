@@ -5,6 +5,9 @@ npm-debug.log*
 
 node_modules
 dist
+coverage
+playwright-report
+test-results
 *.local
 
 # Editor directories and files
