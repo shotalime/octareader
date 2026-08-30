@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   saveKey: vi.fn(),
   validateKey: vi.fn(),
   deleteKey: vi.fn(),
+  clearAll: vi.fn(),
 }))
 
 vi.mock('@/domain/api-key', () => ({
@@ -31,6 +32,10 @@ vi.mock('@/domain/settings', () => ({
     theme: 'light',
   },
   settingsRepository: mocks,
+}))
+
+vi.mock('@/domain/local-data', () => ({
+  localDataService: { clearAll: mocks.clearAll },
 }))
 
 beforeEach(() => {
@@ -58,6 +63,7 @@ beforeEach(() => {
     validatedAt: 1,
   })
   mocks.deleteKey.mockReset().mockResolvedValue(undefined)
+  mocks.clearAll.mockReset().mockResolvedValue(undefined)
 })
 
 describe('SettingsView', () => {
@@ -101,5 +107,24 @@ describe('SettingsView', () => {
     if (deleteButton === undefined) throw new Error('Delete key button missing')
     await deleteButton.trigger('click')
     expect(mocks.deleteKey).toHaveBeenCalledOnce()
+  })
+
+  it('requires confirmation before deleting every local record', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const wrapper = mount(SettingsView)
+    await flushPromises()
+    const clearButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Удалить все данные'))
+    if (clearButton === undefined) throw new Error('Clear data button missing')
+
+    await clearButton.trigger('click')
+    expect(mocks.clearAll).not.toHaveBeenCalled()
+
+    confirm.mockReturnValue(true)
+    await clearButton.trigger('click')
+    await flushPromises()
+    expect(mocks.clearAll).toHaveBeenCalledOnce()
+    expect(wrapper.text()).toContain('Все локальные данные удалены')
   })
 })

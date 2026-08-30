@@ -25,6 +25,7 @@ import {
   apiKeyService,
   type KeyValidationStatus,
 } from '@/domain/api-key'
+import { localDataService } from '@/domain/local-data'
 import {
   DEFAULT_READER_APPEARANCE,
   settingsRepository,
@@ -39,6 +40,8 @@ const apiKey = ref('')
 const keyStatus = ref<KeyValidationStatus>('missing')
 const keyMessage = ref<string | null>(null)
 const isCheckingKey = ref(false)
+const isClearingData = ref(false)
+const dataMessage = ref<string | null>(null)
 
 onMounted(async () => {
   try {
@@ -117,6 +120,31 @@ const deleteApiKey = async (): Promise<void> => {
     keyMessage.value = messageForKeyStatus('missing')
   } catch {
     keyMessage.value = 'Не удалось удалить API key. Попробуйте ещё раз.'
+  }
+}
+
+const clearAllData = async (): Promise<void> => {
+  if (
+    !window.confirm(
+      'Удалить все книги, прогресс, словарь, кеш переводов, настройки и API key? Это действие нельзя отменить.',
+    )
+  ) {
+    return
+  }
+
+  isClearingData.value = true
+  dataMessage.value = null
+  try {
+    await localDataService.clearAll()
+    settings.value = { ...DEFAULT_READER_APPEARANCE }
+    apiKey.value = ''
+    keyStatus.value = 'missing'
+    keyMessage.value = messageForKeyStatus('missing')
+    dataMessage.value = 'Все локальные данные удалены.'
+  } catch {
+    dataMessage.value = 'Не удалось удалить данные. Попробуйте ещё раз.'
+  } finally {
+    isClearingData.value = false
   }
 }
 </script>
@@ -297,6 +325,38 @@ const deleteApiKey = async (): Promise<void> => {
               class="text-sm text-muted-foreground"
             >
               {{ keyMessage }}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card class="border-destructive/40">
+          <CardHeader>
+            <CardTitle class="flex items-center gap-2"
+              ><Trash2 class="size-5" aria-hidden="true" /> Локальные
+              данные</CardTitle
+            >
+            <CardDescription
+              >Удаление затронет книги, прогресс, словарь, историю повторений,
+              кеш переводов, настройки и API key.</CardDescription
+            >
+          </CardHeader>
+          <CardContent class="space-y-3">
+            <Button
+              variant="outline"
+              :disabled="isClearingData"
+              @click="clearAllData"
+              ><LoaderCircle
+                v-if="isClearingData"
+                class="animate-spin"
+                aria-hidden="true"
+              /><Trash2 v-else aria-hidden="true" /> Удалить все данные</Button
+            >
+            <p
+              v-if="dataMessage"
+              role="status"
+              class="text-sm text-muted-foreground"
+            >
+              {{ dataMessage }}
             </p>
           </CardContent>
         </Card>
