@@ -19,6 +19,10 @@ export type SaveVocabularyInput = {
   cfi: string | null
 }
 
+export type VocabularyListItem = VocabularyEntry & {
+  contexts: VocabularyContext[]
+}
+
 const normalizeIdentityPart = (value: string): string =>
   value.normalize('NFKC').trim().toLocaleLowerCase()
 
@@ -115,6 +119,44 @@ export class VocabularyService {
         }
 
         return entry
+      },
+    )
+  }
+
+  async list(): Promise<VocabularyListItem[]> {
+    const entries = await this.db.vocabularyEntries
+      .orderBy('updatedAt')
+      .reverse()
+      .toArray()
+    const contexts = await this.db.vocabularyContexts.toArray()
+    return entries.map((entry) => ({
+      ...entry,
+      contexts: contexts
+        .filter((context) => context.vocabularyEntryId === entry.id)
+        .sort((left, right) => right.createdAt - left.createdAt),
+    }))
+  }
+
+  async delete(entryId: string): Promise<void> {
+    await this.db.transaction(
+      'rw',
+      [
+        this.db.vocabularyEntries,
+        this.db.vocabularyContexts,
+        this.db.reviewSchedules,
+        this.db.reviewEvents,
+      ],
+      async () => {
+        await this.db.vocabularyContexts
+          .where('vocabularyEntryId')
+          .equals(entryId)
+          .delete()
+        await this.db.reviewEvents
+          .where('vocabularyEntryId')
+          .equals(entryId)
+          .delete()
+        await this.db.reviewSchedules.delete(entryId)
+        await this.db.vocabularyEntries.delete(entryId)
       },
     )
   }

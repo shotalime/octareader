@@ -77,4 +77,31 @@ describe('VocabularyService', () => {
         .count(),
     ).toBe(2)
   })
+
+  it('lists persisted contexts and deletes only the selected entry data', async () => {
+    const { db, service } = setup()
+    const first = await service.save(input)
+    const second = await service.save({
+      ...input,
+      lemma: 'walk',
+      sourceText: 'walking',
+    })
+    db.close()
+    const reopened = new OctaReaderDatabase(db.name)
+    const reopenedService = new VocabularyService(reopened)
+    const list = await reopenedService.list()
+    expect(list).toHaveLength(2)
+    expect(list.find(({ id }) => id === first.id)?.contexts).toHaveLength(1)
+    await reopenedService.delete(first.id)
+    expect(await reopened.vocabularyEntries.get(first.id)).toBeUndefined()
+    expect(
+      await reopened.vocabularyContexts
+        .where('vocabularyEntryId')
+        .equals(first.id)
+        .count(),
+    ).toBe(0)
+    expect(await reopened.reviewSchedules.get(first.id)).toBeUndefined()
+    expect(await reopened.vocabularyEntries.get(second.id)).toBeDefined()
+    reopened.close()
+  })
 })
