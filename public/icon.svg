@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="OctaReader">
+  <rect width="512" height="512" rx="112" fill="#175c3a"/>
+  <g fill="none" stroke="#c8e7ce" stroke-linecap="round" stroke-width="22">
+    <path d="M194 216c-44 3-68 30-51 58"/>
+    <path d="M209 232c-33 17-39 47-18 68"/>
+    <path d="M229 239c-19 27-15 54 6 69"/>
+    <path d="M247 242c-7 31 0 55 14 66"/>
+    <path d="M318 216c44 3 68 30 51 58"/>
+    <path d="M303 232c33 17 39 47 18 68"/>
+    <path d="M283 239c19 27 15 54-6 69"/>
+    <path d="M265 242c7 31 0 55-14 66"/>
+  </g>
+  <path
+    d="M171 203c0-58 37-102 85-102s85 44 85 102c0 43-34 71-85 71s-85-28-85-71Z"
+    fill="#c8e7ce"
+  />
+  <g fill="#175c3a">
+    <circle cx="222" cy="185" r="10"/>
+    <circle cx="290" cy="185" r="10"/>
+  </g>
+  <path
+    d="M230 219c14 14 38 14 52 0"
+    fill="none"
+    stroke="#175c3a"
+    stroke-linecap="round"
+    stroke-width="10"
+  />
+  <path
+    d="M105 278c0-15 12-27 27-27h86c16 0 29 7 38 18 9-11 22-18 38-18h86c15 0 27 12 27 27v127c0 11-12 17-21 11-28-18-73-22-124 3l-6 3-6-3c-51-25-96-21-124-3-9 6-21 0-21-11V278Z"
+    fill="#175c3a"
+    stroke="#fffdf7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="22"
+  />
+  <path d="M256 273v149" stroke="#fffdf7" stroke-linecap="round" stroke-width="20"/>
+  <path
+    d="m391 74 7 20 20 7-20 7-7 20-7-20-20-7 20-7 7-20Z"
+    fill="#c8e7ce"
+    stroke="#c8e7ce"
+    stroke-linejoin="round"
+    stroke-width="8"
+  />
+</svg>

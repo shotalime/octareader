@@ -49,3 +49,20 @@ test('мобильная навигация остаётся доступной'
     page.getByRole('heading', { level: 1, name: 'Настройки' }),
   ).toBeVisible()
 })
+
+test('manifest содержит данные для установки', async ({ page }) => {
+  await page.goto('/')
+
+  const manifestHref = await page
+    .locator('link[rel="manifest"]')
+    .getAttribute('href')
+  expect(manifestHref).toBe('/manifest.webmanifest')
+
+  const response = await page.request.get('/manifest.webmanifest')
+  expect(response.ok()).toBe(true)
+
+  const manifest = await response.text()
+  expect(manifest).toContain('OctaReader')
+  expect(manifest).toContain('standalone')
+  expect(manifest).toContain('maskable-icon-512x512.png')
+})
