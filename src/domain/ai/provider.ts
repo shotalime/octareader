@@ -44,6 +44,7 @@ export interface AiProvider {
 }
 
 export type AiErrorCode =
+  | 'missing_key'
   | 'invalid_key'
   | 'quota_exhausted'
   | 'rate_limited'

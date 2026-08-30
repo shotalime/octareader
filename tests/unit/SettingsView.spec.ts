@@ -6,6 +6,20 @@ import SettingsView from '@/views/SettingsView.vue'
 const mocks = vi.hoisted(() => ({
   getReaderAppearance: vi.fn(),
   saveReaderAppearance: vi.fn(),
+  getKeyState: vi.fn(),
+  saveKey: vi.fn(),
+  validateKey: vi.fn(),
+  deleteKey: vi.fn(),
+}))
+
+vi.mock('@/domain/api-key', () => ({
+  aiErrorMessage: () => 'Санитизированная ошибка',
+  apiKeyService: {
+    getState: mocks.getKeyState,
+    save: mocks.saveKey,
+    validate: mocks.validateKey,
+    delete: mocks.deleteKey,
+  },
 }))
 
 vi.mock('@/domain/settings', () => ({
@@ -28,6 +42,22 @@ beforeEach(() => {
     theme: 'dark',
   })
   mocks.saveReaderAppearance.mockReset().mockResolvedValue(undefined)
+  mocks.getKeyState.mockReset().mockResolvedValue({
+    apiKey: null,
+    validationStatus: 'missing',
+    validatedAt: null,
+  })
+  mocks.saveKey.mockReset().mockResolvedValue({
+    apiKey: 'unit-test-credential',
+    validationStatus: 'unchecked',
+    validatedAt: null,
+  })
+  mocks.validateKey.mockReset().mockResolvedValue({
+    apiKey: 'unit-test-credential',
+    validationStatus: 'valid',
+    validatedAt: 1,
+  })
+  mocks.deleteKey.mockReset().mockResolvedValue(undefined)
 })
 
 describe('SettingsView', () => {
@@ -48,5 +78,28 @@ describe('SettingsView', () => {
       expect.objectContaining({ fontFamily: 'serif', theme: 'dark' }),
     )
     expect(wrapper.text()).toContain('Настройки сохранены')
+  })
+
+  it('checks and deletes a Gemini credential', async () => {
+    const wrapper = mount(SettingsView)
+    await flushPromises()
+    await wrapper
+      .get('input[placeholder="Введите ключ Gemini"]')
+      .setValue('unit-test-credential')
+    const checkButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Проверить ключ'))
+    if (checkButton === undefined) throw new Error('Check key button missing')
+    await checkButton.trigger('click')
+    await flushPromises()
+    expect(mocks.validateKey).toHaveBeenCalledWith('unit-test-credential')
+    expect(wrapper.text()).toContain('API key действителен')
+
+    const deleteButton = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Удалить ключ'))
+    if (deleteButton === undefined) throw new Error('Delete key button missing')
+    await deleteButton.trigger('click')
+    expect(mocks.deleteKey).toHaveBeenCalledOnce()
   })
 })
