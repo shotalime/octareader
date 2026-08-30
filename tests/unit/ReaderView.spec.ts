@@ -121,7 +121,7 @@ describe('ReaderView', () => {
     expect(wrapper.text()).toContain('оглавление отсутствует')
     expect(wrapper.find('[data-testid="reader-viewport"]').exists()).toBe(true)
   })
-  it('открывает локальную книгу и управляет страницами и главами', async () => {
+  it('открывает локальную книгу и управляет страницами с нижней панели', async () => {
     const wrapper = mount(ReaderView)
     await flushPromises()
     expect(mocks.open).toHaveBeenCalledWith(
@@ -130,13 +130,36 @@ describe('ReaderView', () => {
       expect.any(Function),
       expect.any(Function),
     )
-    expect(wrapper.text()).toContain('Тестовая книга')
-    await wrapper.get('button[aria-label="Следующая глава"]').trigger('click')
-    await wrapper.findAll('button').at(-1)?.trigger('click')
-    expect(mocks.nextChapter).toHaveBeenCalledOnce()
+    const controls = wrapper.get('nav[aria-label="Управление чтением"]')
+    expect(
+      controls.get('[aria-label="Вернуться в библиотеку"]').attributes('to'),
+    ).toBe('/')
+    expect(controls.text()).toContain('Прогресс рассчитывается')
+    await controls
+      .get('button[aria-label="Следующая страница"]')
+      .trigger('click')
     expect(mocks.nextPage).toHaveBeenCalledOnce()
     wrapper.unmount()
     expect(mocks.destroy).toHaveBeenCalledOnce()
+  })
+
+  it('показывает рассчитанный прогресс и перелистывает назад', async () => {
+    const wrapper = mount(ReaderView)
+    await flushPromises()
+    const onState = mocks.open.mock.calls[0]?.[2] as (state: object) => void
+    onState({
+      cfi: 'epubcfi(/6/2)',
+      progressPercentage: 41.6,
+      isProgressCalculating: false,
+    })
+    await flushPromises()
+
+    const controls = wrapper.get('nav[aria-label="Управление чтением"]')
+    expect(controls.text()).toContain('42%')
+    await controls
+      .get('button[aria-label="Предыдущая страница"]')
+      .trigger('click')
+    expect(mocks.previousPage).toHaveBeenCalledOnce()
   })
 
   it('показывает контролируемую ошибку рендеринга', async () => {

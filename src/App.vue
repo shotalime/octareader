@@ -7,8 +7,15 @@ import {
   Settings,
   Sparkles,
 } from '@lucide/vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
 import PwaUpdateNotice from '@/components/PwaUpdateNotice.vue'
+
+const route = useRoute()
+const isFullscreenReader = computed(
+  () => route.name === 'reader' && typeof route.params.bookId === 'string',
+)
 
 const navigationItems = [
   { to: '/', label: 'Библиотека', icon: LibraryBig },
@@ -30,6 +37,7 @@ const navigationItems = [
     </a>
 
     <aside
+      v-if="!isFullscreenReader"
       class="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-border/70 bg-sidebar px-5 py-6 lg:flex"
     >
       <RouterLink to="/" class="flex items-center gap-3 px-2">
@@ -78,8 +86,9 @@ const navigationItems = [
       </div>
     </aside>
 
-    <div class="lg:pl-72">
+    <div :class="{ 'lg:pl-72': !isFullscreenReader }">
       <header
+        v-if="!isFullscreenReader"
         class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/60 bg-background/90 px-4 backdrop-blur-xl lg:hidden"
       >
         <RouterLink to="/" class="flex items-center gap-2.5">
@@ -99,7 +108,12 @@ const navigationItems = [
 
       <main
         id="main-content"
-        class="mx-auto min-h-dvh w-full max-w-7xl px-4 pb-28 pt-8 sm:px-6 lg:px-10 lg:pb-12 lg:pt-10"
+        class="min-h-dvh w-full"
+        :class="
+          isFullscreenReader
+            ? 'max-w-none overflow-hidden p-0'
+            : 'mx-auto max-w-7xl px-4 pb-28 pt-8 sm:px-6 lg:px-10 lg:pb-12 lg:pt-10'
+        "
       >
         <RouterView v-slot="{ Component: routeComponent }">
           <Transition name="page" mode="out-in">
@@ -110,6 +124,7 @@ const navigationItems = [
     </div>
 
     <nav
+      v-if="!isFullscreenReader"
       class="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 rounded-2xl border border-border/80 bg-sidebar/95 p-1.5 shadow-2xl shadow-stone-900/10 backdrop-blur-xl lg:hidden"
       aria-label="Мобильная навигация"
     >

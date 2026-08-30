@@ -2,9 +2,7 @@
 import {
   ArrowLeft,
   ArrowRight,
-  BookOpenText,
-  ChevronsLeft,
-  ChevronsRight,
+  LibraryBig,
   LoaderCircle,
   List,
   X,
@@ -12,7 +10,6 @@ import {
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
-import PageHeader from '@/components/PageHeader.vue'
 import ReaderTocList from '@/components/ReaderTocList.vue'
 import TranslationPopup from '@/components/TranslationPopup.vue'
 import { Button } from '@/components/ui/button'
@@ -205,66 +202,19 @@ onBeforeUnmount(() => void session.value?.destroy())
 </script>
 
 <template>
-  <section>
-    <PageHeader
-      eyebrow="Режим чтения"
-      :title="session?.title ?? 'Читалка'"
-      :description="
-        session
-          ? (session.author ?? 'Автор не указан')
-          : 'Выберите книгу в библиотеке, чтобы начать чтение.'
-      "
-    />
+  <section class="flex h-dvh min-h-0 flex-col overflow-hidden bg-stone-900">
+    <h1 class="sr-only">Читалка</h1>
     <p
       v-if="errorMessage"
       role="alert"
-      class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+      class="m-3 shrink-0 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
     >
       {{ errorMessage }}
     </p>
 
-    <div class="mt-8 overflow-hidden rounded-3xl border bg-stone-900 shadow-xl">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div
-        class="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white"
-      >
-        <div class="flex items-center gap-2 text-sm font-medium">
-          <BookOpenText class="size-4" aria-hidden="true" />{{
-            session?.title ?? 'Книга не выбрана'
-          }}
-        </div>
-        <div v-if="session" class="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            class="text-white hover:bg-white/10"
-            :aria-expanded="isTableOfContentsOpen"
-            aria-controls="reader-toc"
-            @click="isTableOfContentsOpen = !isTableOfContentsOpen"
-            ><List aria-hidden="true" /> Оглавление</Button
-          >
-          <Button
-            variant="ghost"
-            size="sm"
-            class="text-white hover:bg-white/10"
-            :disabled="isNavigating"
-            aria-label="Предыдущая глава"
-            @click="runNavigation((reader) => reader.previousChapter())"
-            ><ChevronsLeft aria-hidden="true" /> Глава</Button
-          >
-          <Button
-            variant="ghost"
-            size="sm"
-            class="text-white hover:bg-white/10"
-            :disabled="isNavigating"
-            aria-label="Следующая глава"
-            @click="runNavigation((reader) => reader.nextChapter())"
-            >Глава <ChevronsRight aria-hidden="true"
-          /></Button>
-        </div>
-      </div>
-
-      <div
-        class="relative p-2 sm:p-5"
+        class="relative min-h-0 flex-1"
         :class="
           session?.appearance.theme === 'dark' ? 'bg-stone-950' : 'bg-[#f5f0e4]'
         "
@@ -272,7 +222,7 @@ onBeforeUnmount(() => void session.value?.destroy())
         <aside
           v-if="isTableOfContentsOpen && session"
           id="reader-toc"
-          class="absolute inset-y-2 left-2 z-10 w-[min(22rem,calc(100%-1rem))] overflow-y-auto rounded-2xl border bg-card p-4 shadow-2xl sm:inset-y-5 sm:left-5"
+          class="absolute inset-y-2 left-2 z-10 w-[min(22rem,calc(100%-1rem))] overflow-y-auto rounded-2xl border bg-card p-4 shadow-2xl"
           aria-label="Оглавление книги"
         >
           <div class="flex items-center justify-between gap-3">
@@ -301,7 +251,7 @@ onBeforeUnmount(() => void session.value?.destroy())
         <div
           ref="viewport"
           data-testid="reader-viewport"
-          class="mx-auto h-[65dvh] min-h-[30rem] max-w-5xl overflow-hidden rounded-2xl shadow-sm"
+          class="mx-auto h-full w-full max-w-5xl overflow-hidden"
           :class="
             session?.appearance.theme === 'dark'
               ? 'bg-stone-900'
@@ -341,29 +291,60 @@ onBeforeUnmount(() => void session.value?.destroy())
         />
       </div>
 
-      <div class="flex items-center justify-between px-4 py-3 text-white">
+      <nav
+        aria-label="Управление чтением"
+        class="grid shrink-0 grid-cols-[auto_auto_minmax(0,1fr)_minmax(2.75rem,5rem)_minmax(2.75rem,5rem)] items-center gap-1 border-t border-white/10 bg-stone-900 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 text-white sm:px-4"
+      >
         <Button
+          as-child
           variant="ghost"
+          size="icon"
           class="text-white hover:bg-white/10"
-          :disabled="!session || isNavigating"
-          @click="runNavigation((reader) => reader.previousPage())"
-          ><ArrowLeft aria-hidden="true" /> Назад</Button
         >
-        <span class="text-xs text-white/60">{{
-          !session
-            ? 'Книга не выбрана'
-            : isProgressCalculating
-              ? 'Прогресс рассчитывается'
-              : `${Math.round(progressPercentage ?? 0)}%`
-        }}</span>
+          <RouterLink to="/" aria-label="Вернуться в библиотеку">
+            <LibraryBig aria-hidden="true" />
+          </RouterLink>
+        </Button>
         <Button
           variant="ghost"
+          size="icon"
           class="text-white hover:bg-white/10"
-          :disabled="!session || isNavigating"
-          @click="runNavigation((reader) => reader.nextPage())"
-          >Вперёд <ArrowRight aria-hidden="true"
+          :disabled="!session"
+          :aria-expanded="isTableOfContentsOpen"
+          aria-controls="reader-toc"
+          aria-label="Открыть оглавление"
+          @click="isTableOfContentsOpen = !isTableOfContentsOpen"
+          ><List aria-hidden="true"
         /></Button>
-      </div>
+        <span
+          class="truncate px-1 text-center text-[11px] text-white/70 sm:text-xs"
+          >{{
+            !session
+              ? 'Книга не выбрана'
+              : isProgressCalculating
+                ? 'Прогресс рассчитывается'
+                : `${Math.round(progressPercentage ?? 0)}%`
+          }}</span
+        >
+        <Button
+          variant="ghost"
+          size="icon"
+          class="w-full border border-white/15 bg-white/10 text-white shadow-sm transition-all hover:border-white/25 hover:bg-white/20 active:scale-[0.97] [&_svg]:size-5"
+          :disabled="!session || isNavigating"
+          aria-label="Предыдущая страница"
+          @click="runNavigation((reader) => reader.previousPage())"
+          ><ArrowLeft aria-hidden="true"
+        /></Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          class="w-full border border-white/15 bg-white/10 text-white shadow-sm transition-all hover:border-white/25 hover:bg-white/20 active:scale-[0.97] [&_svg]:size-5"
+          :disabled="!session || isNavigating"
+          aria-label="Следующая страница"
+          @click="runNavigation((reader) => reader.nextPage())"
+          ><ArrowRight aria-hidden="true"
+        /></Button>
+      </nav>
     </div>
   </section>
 </template>

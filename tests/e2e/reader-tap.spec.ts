@@ -47,6 +47,28 @@ test('tap inside the EPUB document detects a word and sentence', async ({
   })
   await expect(page.getByText('Tap test')).toBeVisible()
   await page.getByRole('link', { name: 'Открыть' }).click()
+  await expect(
+    page.getByRole('navigation', { name: 'Основная навигация' }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('navigation', { name: 'Мобильная навигация' }),
+  ).toHaveCount(0)
+  const readerControls = page.getByRole('navigation', {
+    name: 'Управление чтением',
+  })
+  await expect(readerControls).toBeVisible()
+  await expect(
+    readerControls.getByRole('link', { name: 'Вернуться в библиотеку' }),
+  ).toBeVisible()
+  await expect(
+    readerControls.getByRole('button', { name: 'Открыть оглавление' }),
+  ).toBeVisible()
+  await expect(
+    readerControls.getByRole('button', { name: 'Предыдущая страница' }),
+  ).toBeVisible()
+  await expect(
+    readerControls.getByRole('button', { name: 'Следующая страница' }),
+  ).toBeVisible()
   const iframe = page.locator('[data-testid="reader-viewport"] iframe')
   await expect(iframe).toBeVisible()
   const readerFrame = page.frames().find((frame) => frame !== page.mainFrame())
