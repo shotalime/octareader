@@ -1,0 +1,23 @@
+:root {
+  color: #292722;
+  background: #f7f4ed;
+  font-family: system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+main {
+  width: min(100% - 2rem, 64rem);
+  margin: 0 auto;
+  padding-block: 4rem;
+}
