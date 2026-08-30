@@ -10,6 +10,7 @@ import {
   type TranslationResult,
 } from '@/domain/ai/provider'
 import { apiKeyService, type ApiKeyService } from '@/domain/api-key'
+import { normalizeLanguageCode } from '@/domain/languages'
 
 export type TranslationOutcome = {
   result: TranslationResult
@@ -20,7 +21,7 @@ const normalizeWhitespace = (value: string): string =>
   value.normalize('NFC').replace(/\s+/gu, ' ').trim()
 
 const normalizeLanguage = (value: string): string =>
-  value.normalize('NFC').trim().toLocaleLowerCase()
+  normalizeLanguageCode(value) ?? value.normalize('NFKC').trim()
 
 export const normalizeTranslationCacheText = (
   value: string,

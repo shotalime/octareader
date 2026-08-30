@@ -66,6 +66,36 @@ afterEach(async () => {
 })
 
 describe('TranslationService', () => {
+  it('uses canonical language codes in provider requests and cache keys', async () => {
+    const db = createDatabase()
+    const service = new TranslationService(
+      db,
+      provider,
+      { keyForTranslation },
+      'test-model',
+    )
+
+    await service.translate({
+      ...request,
+      sourceLanguage: 'iw',
+      targetLanguage: 'zh-TW',
+    })
+
+    expect(translate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceLanguage: 'he',
+        targetLanguage: 'zh-Hant',
+      }),
+      'unit-test-credential',
+    )
+    const cached = await db.translationCache.toCollection().first()
+    expect(cached).toMatchObject({
+      sourceLanguage: 'he',
+      targetLanguage: 'zh-Hant',
+    })
+    db.close()
+  })
+
   it('caches a successful result and avoids a second network request', async () => {
     const db = createDatabase()
     const service = new TranslationService(

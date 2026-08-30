@@ -15,6 +15,7 @@ import TranslationPopup from '@/components/TranslationPopup.vue'
 import { Button } from '@/components/ui/button'
 import { type TranslationResult } from '@/domain/ai/provider'
 import { aiErrorMessage } from '@/domain/api-key'
+import { normalizeLanguageCode } from '@/domain/languages'
 import {
   READER_ERROR_MESSAGE,
   readerService,
@@ -186,9 +187,12 @@ onMounted(async () => {
     )
     session.value = openedSession
     sourceLanguage.value =
-      openedSession.bookLanguages?.sourceLanguage ??
-      openedSession.suggestedSourceLanguage
-    targetLanguage.value = openedSession.bookLanguages?.targetLanguage ?? 'ru'
+      normalizeLanguageCode(
+        openedSession.bookLanguages?.sourceLanguage ??
+          openedSession.suggestedSourceLanguage,
+      ) ?? 'en'
+    targetLanguage.value =
+      normalizeLanguageCode(openedSession.bookLanguages?.targetLanguage) ?? 'ru'
     hasBookLanguages.value = openedSession.bookLanguages !== null
     if (tappedText.value !== null) void translateTappedText()
   } catch {

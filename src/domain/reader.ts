@@ -6,6 +6,7 @@ import type { NavItem } from 'epubjs/types/navigation'
 import { database, type OctaReaderDatabase } from '@/data/database'
 import type { BookSetting, ReadingProgress } from '@/data/models'
 import { registerEpubTapDetection } from '@/domain/epub-tap'
+import { normalizeLanguageCode } from '@/domain/languages'
 import {
   SettingsRepository,
   type ReaderAppearanceSettings,
@@ -112,26 +113,8 @@ const loadTableOfContents = async (
   }
 }
 
-const suggestedBookLanguage = (value: string | undefined): string => {
-  const baseLanguage = value?.split('-')[0]?.toLocaleLowerCase()
-  return baseLanguage !== undefined &&
-    [
-      'en',
-      'ru',
-      'de',
-      'fr',
-      'es',
-      'it',
-      'pt',
-      'pl',
-      'uk',
-      'tr',
-      'ja',
-      'ko',
-      'zh',
-    ].includes(baseLanguage)
-    ? baseLanguage
-    : 'en'
+export const suggestedBookLanguage = (value: string | undefined): string => {
+  return normalizeLanguageCode(value) ?? 'en'
 }
 
 const chapterHref = (

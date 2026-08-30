@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { OctaReaderDatabase } from '@/data/database'
 import type { Book } from '@/data/models'
-import { ReaderService } from '@/domain/reader'
+import { ReaderService, suggestedBookLanguage } from '@/domain/reader'
 
 type RelocatedListener = (location: { start: { cfi: string } }) => void
 
@@ -105,6 +105,12 @@ afterEach(async () => {
 })
 
 describe('ReaderService progress', () => {
+  it('accepts a supported EPUB metadata language outside the former list', () => {
+    expect(suggestedBookLanguage('nl-NL')).toBe('nl')
+    expect(suggestedBookLanguage('zh-TW')).toBe('zh-Hant')
+    expect(suggestedBookLanguage('xx-Zzzz')).toBe('en')
+  })
+
   it('restores CFI and persists relocated progress after 750 ms', async () => {
     const db = createDatabase()
     await db.books.add(bookRecord)

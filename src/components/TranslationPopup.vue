@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Check, LoaderCircle, RotateCcw, X } from '@lucide/vue'
 
+import LanguageSelect from '@/components/LanguageSelect.vue'
 import { Button } from '@/components/ui/button'
 import type { PartOfSpeech, TranslationResult } from '@/domain/ai/provider'
 import type { TappedText } from '@/domain/text-selection'
@@ -31,22 +32,6 @@ defineEmits<{
   saveLanguages: []
   save: []
 }>()
-
-const languages = [
-  { code: 'en', label: 'Английский' },
-  { code: 'ru', label: 'Русский' },
-  { code: 'de', label: 'Немецкий' },
-  { code: 'fr', label: 'Французский' },
-  { code: 'es', label: 'Испанский' },
-  { code: 'it', label: 'Итальянский' },
-  { code: 'pt', label: 'Португальский' },
-  { code: 'pl', label: 'Польский' },
-  { code: 'uk', label: 'Украинский' },
-  { code: 'tr', label: 'Турецкий' },
-  { code: 'ja', label: 'Японский' },
-  { code: 'ko', label: 'Корейский' },
-  { code: 'zh', label: 'Китайский' },
-] as const
 
 const partOfSpeechLabels: Record<PartOfSpeech, string> = {
   noun: 'существительное',
@@ -103,36 +88,16 @@ const partOfSpeechLabels: Record<PartOfSpeech, string> = {
     <div v-if="status === 'needs-languages'" class="mt-5 space-y-4">
       <p class="text-sm">Укажите направление перевода для этой книги.</p>
       <div class="grid gap-3 sm:grid-cols-2">
-        <label class="grid gap-1 text-sm font-medium">
-          Язык книги
-          <select
-            v-model="sourceLanguage"
-            class="h-10 rounded-xl border bg-background px-3"
-          >
-            <option
-              v-for="language in languages"
-              :key="language.code"
-              :value="language.code"
-            >
-              {{ language.label }}
-            </option>
-          </select>
-        </label>
-        <label class="grid gap-1 text-sm font-medium">
-          Переводить на
-          <select
-            v-model="targetLanguage"
-            class="h-10 rounded-xl border bg-background px-3"
-          >
-            <option
-              v-for="language in languages"
-              :key="language.code"
-              :value="language.code"
-            >
-              {{ language.label }}
-            </option>
-          </select>
-        </label>
+        <LanguageSelect
+          v-model="sourceLanguage"
+          label="Язык книги"
+          search-label="Поиск языка книги"
+        />
+        <LanguageSelect
+          v-model="targetLanguage"
+          label="Переводить на"
+          search-label="Поиск языка перевода"
+        />
       </div>
       <Button @click="$emit('saveLanguages')">Сохранить и перевести</Button>
     </div>

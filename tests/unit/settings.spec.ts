@@ -71,6 +71,19 @@ describe('SettingsRepository', () => {
     })
     db.close()
   })
+
+  it('normalizes canonical language codes before persistence', async () => {
+    const db = createDatabase()
+    const repository = new SettingsRepository(db)
+
+    await repository.saveBookLanguages('book-1', 'iw', 'zh-TW', 1)
+
+    expect(await repository.getBookLanguages('book-1')).toMatchObject({
+      sourceLanguage: 'he',
+      targetLanguage: 'zh-Hant',
+    })
+    db.close()
+  })
 })
 
 describe('AI configuration', () => {

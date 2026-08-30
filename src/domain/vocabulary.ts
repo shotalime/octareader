@@ -5,6 +5,7 @@ import type {
   VocabularyEntry,
 } from '@/data/models'
 import type { PartOfSpeech } from '@/domain/ai/provider'
+import { normalizeLanguageCode } from '@/domain/languages'
 
 export type SaveVocabularyInput = {
   sourceText: string
@@ -26,6 +27,9 @@ export type VocabularyListItem = VocabularyEntry & {
 const normalizeIdentityPart = (value: string): string =>
   value.normalize('NFKC').trim().toLocaleLowerCase()
 
+const normalizeLanguageIdentity = (value: string): string =>
+  normalizeLanguageCode(value) ?? normalizeIdentityPart(value)
+
 export const vocabularyIdentityKey = (
   lemmaOrSourceText: string,
   partOfSpeech: PartOfSpeech,
@@ -35,8 +39,8 @@ export const vocabularyIdentityKey = (
   JSON.stringify([
     normalizeIdentityPart(lemmaOrSourceText),
     partOfSpeech,
-    normalizeIdentityPart(sourceLanguage),
-    normalizeIdentityPart(targetLanguage),
+    normalizeLanguageIdentity(sourceLanguage),
+    normalizeLanguageIdentity(targetLanguage),
   ])
 
 const sameContext = (
@@ -54,11 +58,15 @@ export class VocabularyService {
 
   async save(input: SaveVocabularyInput): Promise<VocabularyEntry> {
     const lemma = input.lemma?.trim() || input.sourceText.trim()
+    const sourceLanguage =
+      normalizeLanguageCode(input.sourceLanguage) ?? input.sourceLanguage
+    const targetLanguage =
+      normalizeLanguageCode(input.targetLanguage) ?? input.targetLanguage
     const identityKey = vocabularyIdentityKey(
       lemma,
       input.partOfSpeech,
-      input.sourceLanguage,
-      input.targetLanguage,
+      sourceLanguage,
+      targetLanguage,
     )
 
     return this.db.transaction(
@@ -81,8 +89,8 @@ export class VocabularyService {
             identityKey,
             lemma,
             partOfSpeech: input.partOfSpeech,
-            sourceLanguage: input.sourceLanguage,
-            targetLanguage: input.targetLanguage,
+            sourceLanguage,
+            targetLanguage,
             createdAt: now,
             updatedAt: now,
           }

@@ -1,6 +1,7 @@
 import type { OctaReaderDatabase } from '@/data/database'
 import { database } from '@/data/database'
 import type { BookSetting, Setting } from '@/data/models'
+import { normalizeLanguageCode } from '@/domain/languages'
 
 export const APPLICATION_SETTINGS_KEY = 'application-settings'
 
@@ -64,7 +65,12 @@ export class SettingsRepository {
   }
 
   async getBookLanguages(bookId: string): Promise<BookSetting | undefined> {
-    return this.db.bookSettings.get(bookId)
+    const setting = await this.db.bookSettings.get(bookId)
+    if (setting === undefined) return undefined
+    const sourceLanguage = normalizeLanguageCode(setting.sourceLanguage)
+    const targetLanguage = normalizeLanguageCode(setting.targetLanguage)
+    if (sourceLanguage === null || targetLanguage === null) return undefined
+    return { ...setting, sourceLanguage, targetLanguage }
   }
 
   async saveBookLanguages(
@@ -73,10 +79,18 @@ export class SettingsRepository {
     targetLanguage: string,
     updatedAt = Date.now(),
   ): Promise<void> {
+    const normalizedSourceLanguage = normalizeLanguageCode(sourceLanguage)
+    const normalizedTargetLanguage = normalizeLanguageCode(targetLanguage)
+    if (
+      normalizedSourceLanguage === null ||
+      normalizedTargetLanguage === null
+    ) {
+      throw new Error('Unsupported translation language')
+    }
     await this.db.bookSettings.put({
       bookId,
-      sourceLanguage,
-      targetLanguage,
+      sourceLanguage: normalizedSourceLanguage,
+      targetLanguage: normalizedTargetLanguage,
       updatedAt,
     })
   }
