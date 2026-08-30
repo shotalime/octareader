@@ -1,6 +1,7 @@
 import ePub from 'epubjs'
 import type Book from 'epubjs/types/book'
 import type Rendition from 'epubjs/types/rendition'
+import type { NavItem } from 'epubjs/types/navigation'
 
 import { database, type OctaReaderDatabase } from '@/data/database'
 
@@ -14,7 +15,42 @@ export type ReaderSession = {
   previousPage: () => Promise<void>
   nextChapter: () => Promise<void>
   previousChapter: () => Promise<void>
+  tableOfContents: TableOfContentsItem[]
+  goTo: (href: string) => Promise<void>
   destroy: () => void
+}
+
+export type TableOfContentsItem = {
+  id: string
+  href: string
+  label: string
+  children: TableOfContentsItem[]
+}
+
+const toTableOfContentsItem = (item: NavItem): TableOfContentsItem => ({
+  id: item.id,
+  href: item.href,
+  label: item.label.trim(),
+  children: (item.subitems ?? []).map(toTableOfContentsItem),
+})
+
+const loadTableOfContents = async (
+  book: Book,
+): Promise<TableOfContentsItem[]> => {
+  try {
+    const navigation = await Promise.race([
+      book.loaded.navigation,
+      new Promise<null>((resolve) =>
+        window.setTimeout(() => resolve(null), 1000),
+      ),
+    ])
+    if (navigation === null) return []
+    return navigation.toc
+      .map(toTableOfContentsItem)
+      .filter((item) => item.label.length > 0 && item.href.length > 0)
+  } catch {
+    return []
+  }
 }
 
 const chapterHref = (
@@ -44,7 +80,7 @@ export class ReaderService {
     let rendition: Rendition | null = null
     try {
       book = ePub(await fileRecord.file.arrayBuffer())
-      await book.ready
+      await book.opened
       rendition = book.renderTo(element, {
         width: '100%',
         height: '100%',
@@ -65,6 +101,8 @@ export class ReaderService {
       if (href !== null) await openedRendition.display(href)
     }
 
+    const tableOfContents = await loadTableOfContents(openedBook)
+
     return {
       title: bookRecord.title,
       author: bookRecord.author,
@@ -72,6 +110,8 @@ export class ReaderService {
       previousPage: async () => openedRendition.prev(),
       nextChapter: async () => displayChapter(1),
       previousChapter: async () => displayChapter(-1),
+      tableOfContents,
+      goTo: async (href: string) => openedRendition.display(href),
       destroy: () => {
         openedRendition.destroy()
         openedBook.destroy()

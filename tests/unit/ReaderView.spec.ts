@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   nextChapter: vi.fn(),
   previousChapter: vi.fn(),
   destroy: vi.fn(),
+  goTo: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -31,10 +32,47 @@ beforeEach(() => {
     nextChapter: mocks.nextChapter,
     previousChapter: mocks.previousChapter,
     destroy: mocks.destroy,
+    tableOfContents: [
+      {
+        id: 'chapter-1',
+        href: 'chapter-1.xhtml',
+        label: 'Глава 1',
+        children: [],
+      },
+    ],
+    goTo: mocks.goTo,
   })
 })
 
 describe('ReaderView', () => {
+  it('открывает оглавление и переходит к выбранной главе', async () => {
+    const wrapper = mount(ReaderView)
+    await flushPromises()
+    await wrapper.get('button[aria-controls="reader-toc"]').trigger('click')
+    expect(wrapper.text()).toContain('Глава 1')
+    await wrapper.get('#reader-toc li button').trigger('click')
+    expect(mocks.goTo).toHaveBeenCalledWith('chapter-1.xhtml')
+    expect(wrapper.find('#reader-toc').exists()).toBe(false)
+  })
+
+  it('не мешает чтению книги без оглавления', async () => {
+    mocks.open.mockResolvedValue({
+      title: 'Без оглавления',
+      author: null,
+      nextPage: mocks.nextPage,
+      previousPage: mocks.previousPage,
+      nextChapter: mocks.nextChapter,
+      previousChapter: mocks.previousChapter,
+      destroy: mocks.destroy,
+      tableOfContents: [],
+      goTo: mocks.goTo,
+    })
+    const wrapper = mount(ReaderView)
+    await flushPromises()
+    await wrapper.get('button[aria-controls="reader-toc"]').trigger('click')
+    expect(wrapper.text()).toContain('оглавление отсутствует')
+    expect(wrapper.find('[data-testid="reader-viewport"]').exists()).toBe(true)
+  })
   it('открывает локальную книгу и управляет страницами и главами', async () => {
     const wrapper = mount(ReaderView)
     await flushPromises()

@@ -6,11 +6,14 @@ import {
   ChevronsLeft,
   ChevronsRight,
   LoaderCircle,
+  List,
+  X,
 } from '@lucide/vue'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 import PageHeader from '@/components/PageHeader.vue'
+import ReaderTocList from '@/components/ReaderTocList.vue'
 import { Button } from '@/components/ui/button'
 import {
   READER_ERROR_MESSAGE,
@@ -24,6 +27,7 @@ const session = ref<ReaderSession | null>(null)
 const isLoading = ref(false)
 const isNavigating = ref(false)
 const errorMessage = ref<string | null>(null)
+const isTableOfContentsOpen = ref(false)
 
 const runNavigation = async (
   action: (reader: ReaderSession) => Promise<void>,
@@ -37,6 +41,11 @@ const runNavigation = async (
   } finally {
     isNavigating.value = false
   }
+}
+
+const goToTableOfContentsItem = async (href: string): Promise<void> => {
+  await runNavigation((reader) => reader.goTo(href))
+  if (errorMessage.value === null) isTableOfContentsOpen.value = false
 }
 
 onMounted(async () => {
@@ -88,6 +97,15 @@ onBeforeUnmount(() => session.value?.destroy())
             variant="ghost"
             size="sm"
             class="text-white hover:bg-white/10"
+            :aria-expanded="isTableOfContentsOpen"
+            aria-controls="reader-toc"
+            @click="isTableOfContentsOpen = !isTableOfContentsOpen"
+            ><List aria-hidden="true" /> Оглавление</Button
+          >
+          <Button
+            variant="ghost"
+            size="sm"
+            class="text-white hover:bg-white/10"
             :disabled="isNavigating"
             aria-label="Предыдущая глава"
             @click="runNavigation((reader) => reader.previousChapter())"
@@ -106,6 +124,35 @@ onBeforeUnmount(() => session.value?.destroy())
       </div>
 
       <div class="relative bg-[#f5f0e4] p-2 sm:p-5">
+        <aside
+          v-if="isTableOfContentsOpen && session"
+          id="reader-toc"
+          class="absolute inset-y-2 left-2 z-10 w-[min(22rem,calc(100%-1rem))] overflow-y-auto rounded-2xl border bg-card p-4 shadow-2xl sm:inset-y-5 sm:left-5"
+          aria-label="Оглавление книги"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="font-serif text-xl font-semibold">Оглавление</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Закрыть оглавление"
+              @click="isTableOfContentsOpen = false"
+              ><X aria-hidden="true"
+            /></Button>
+          </div>
+          <p
+            v-if="session.tableOfContents.length === 0"
+            class="mt-6 text-sm text-muted-foreground"
+          >
+            В этой книге оглавление отсутствует.
+          </p>
+          <ReaderTocList
+            v-else
+            class="mt-4"
+            :items="session.tableOfContents"
+            @select="goToTableOfContentsItem"
+          />
+        </aside>
         <div
           ref="viewport"
           data-testid="reader-viewport"
