@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { DEFAULT_AI_MODEL } from '../../src/config/ai'
+
 const putRecords = async (
   page: Page,
   records: Record<string, unknown[]>,
@@ -101,7 +103,7 @@ test('локальные данные проходят основной MVP-сц
         sourceLanguage: 'en',
         targetLanguage: 'ru',
         provider: 'gemini',
-        model: 'gemini-2.5-flash',
+        model: DEFAULT_AI_MODEL,
         result: {
           schemaVersion: 1,
           status: 'translated',

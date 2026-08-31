@@ -49,6 +49,7 @@ export type AiErrorCode =
   | 'quota_exhausted'
   | 'rate_limited'
   | 'offline'
+  | 'timeout'
   | 'invalid_response'
   | 'unknown'
 

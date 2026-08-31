@@ -88,6 +88,6 @@ describe('SettingsRepository', () => {
 
 describe('AI configuration', () => {
   it('exposes the configured default model', () => {
-    expect(DEFAULT_AI_MODEL).toBe('gemini-2.5-flash')
+    expect(DEFAULT_AI_MODEL).toBe('gemini-3.6-flash')
   })
 })

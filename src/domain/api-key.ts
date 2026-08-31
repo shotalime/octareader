@@ -36,6 +36,7 @@ const errorCode = (error: unknown): AiProviderError['code'] | null => {
     code === 'quota_exhausted' ||
     code === 'rate_limited' ||
     code === 'offline' ||
+    code === 'timeout' ||
     code === 'invalid_response' ||
     code === 'unknown'
     ? code
@@ -78,6 +79,8 @@ export const aiErrorMessage = (error: unknown): string => {
       return 'Слишком много запросов. Попробуйте ещё раз через некоторое время.'
     case 'offline':
       return 'Нет подключения к интернету. Сохранённые переводы по-прежнему доступны.'
+    case 'timeout':
+      return 'Сервис перевода отвечает слишком долго. Попробуйте позже.'
     case 'invalid_response':
     case 'unknown':
       return 'Не удалось получить перевод. Попробуйте ещё раз.'

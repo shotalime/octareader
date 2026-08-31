@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DEFAULT_AI_MODEL } from '@/config/ai'
 import { GeminiProvider } from '@/domain/ai/gemini'
@@ -34,6 +34,10 @@ describe('GeminiProvider', () => {
     delay.mockClear()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('uses configured model, structured JSON, context, and a header credential', async () => {
     const provider = new GeminiProvider(DEFAULT_AI_MODEL, fetcher, delay)
     await expect(
@@ -47,7 +51,24 @@ describe('GeminiProvider', () => {
     })
     expect(init.body).not.toContain('unit-test-credential')
     expect(init.body).toContain(request.sentence)
-    expect(init.body).toContain('responseSchema')
+    if (typeof init.body !== 'string') {
+      throw new Error('Gemini request body must be JSON text')
+    }
+    const body = JSON.parse(init.body) as {
+      generationConfig: Record<string, unknown>
+    }
+    expect(body.generationConfig).not.toHaveProperty('responseSchema')
+    expect(body.generationConfig).toMatchObject({
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingLevel: 'minimal' },
+      responseJsonSchema: {
+        properties: {
+          schemaVersion: { type: 'integer', enum: [1] },
+          lemma: { type: ['string', 'null'] },
+          translation: { type: ['string', 'null'] },
+        },
+      },
+    })
   })
 
   it.each([
@@ -90,6 +111,32 @@ describe('GeminiProvider', () => {
       ),
     ).rejects.toMatchObject({ code: 'offline' })
     expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
+  it('aborts a slow request without retrying it', async () => {
+    vi.useFakeTimers()
+    fetcher.mockImplementation(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Request timed out', 'AbortError'))
+          })
+        }),
+    )
+    const translation = new GeminiProvider(
+      DEFAULT_AI_MODEL,
+      fetcher,
+      delay,
+    ).translate(request, 'unit-test-credential')
+    const rejection = expect(translation).rejects.toMatchObject({
+      code: 'timeout',
+    })
+
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    await rejection
+    expect(fetcher).toHaveBeenCalledOnce()
+    expect(delay).not.toHaveBeenCalled()
   })
 
   it.each([

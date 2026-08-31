@@ -94,6 +94,7 @@ describe('AI error messages', () => {
       'offline',
       'Нет подключения к интернету. Сохранённые переводы по-прежнему доступны.',
     ],
+    ['timeout', 'Сервис перевода отвечает слишком долго. Попробуйте позже.'],
     ['invalid_response', 'Не удалось получить перевод. Попробуйте ещё раз.'],
   ] as const)('maps %s to a sanitized Russian message', (code, message) => {
     expect(aiErrorMessage(new AiProviderError(code))).toBe(message)

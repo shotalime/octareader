@@ -16,8 +16,9 @@ type Delay = (milliseconds: number) => Promise<void>
 
 const API_ORIGIN = 'https://generativelanguage.googleapis.com'
 const NETWORK_RETRY_DELAY_MS = 350
+const REQUEST_TIMEOUT_MS = 20_000
 
-const responseSchema = {
+const responseJsonSchema = {
   type: 'object',
   properties: {
     schemaVersion: { type: 'integer', enum: [1] },
@@ -138,14 +139,25 @@ export class GeminiProvider implements AiProvider {
     init: RequestInit,
   ): Promise<Response> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS,
+      )
       try {
-        return await this.fetcher(input, init)
+        return await this.fetcher(input, { ...init, signal: controller.signal })
       } catch (error: unknown) {
+        if (controller.signal.aborted) {
+          throw new AiProviderError('timeout', { cause: error })
+        }
+        if (error instanceof AiProviderError) throw error
         if (attempt === 0 && navigator.onLine) {
           await this.delay(NETWORK_RETRY_DELAY_MS)
           continue
         }
         throw new AiProviderError('offline', { cause: error })
+      } finally {
+        window.clearTimeout(timeout)
       }
     }
     throw new AiProviderError('offline')
@@ -167,7 +179,10 @@ export class GeminiProvider implements AiProvider {
         ],
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema,
+          responseJsonSchema,
+          thinkingConfig: {
+            thinkingLevel: 'minimal',
+          },
         },
       }),
     })
