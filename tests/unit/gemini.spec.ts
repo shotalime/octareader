@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DEFAULT_AI_MODEL } from '@/config/ai'
+import {
+  DEFAULT_AI_MAX_OUTPUT_TOKENS,
+  DEFAULT_AI_MODEL,
+} from '@/config/ai'
 import { GeminiProvider } from '@/domain/ai/gemini'
 
 const request = {
@@ -59,6 +62,7 @@ describe('GeminiProvider', () => {
     }
     expect(body.generationConfig).not.toHaveProperty('responseSchema')
     expect(body.generationConfig).toMatchObject({
+      maxOutputTokens: DEFAULT_AI_MAX_OUTPUT_TOKENS,
       responseMimeType: 'application/json',
       thinkingConfig: { thinkingLevel: 'minimal' },
       responseJsonSchema: {

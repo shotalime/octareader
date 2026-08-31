@@ -3,7 +3,10 @@ import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { DEFAULT_AI_MODEL } from '@/config/ai'
+import {
+  DEFAULT_AI_MAX_OUTPUT_TOKENS,
+  DEFAULT_AI_MODEL,
+} from '@/config/ai'
 import { OctaReaderDatabase } from '@/data/database'
 import {
   DEFAULT_READER_APPEARANCE,
@@ -88,6 +91,7 @@ describe('SettingsRepository', () => {
 
 describe('AI configuration', () => {
   it('exposes the configured default model', () => {
-    expect(DEFAULT_AI_MODEL).toBe('gemini-3.6-flash')
+    expect(DEFAULT_AI_MODEL).toBe('gemini-3.5-flash-lite')
+    expect(DEFAULT_AI_MAX_OUTPUT_TOKENS).toBe(1024)
   })
 })

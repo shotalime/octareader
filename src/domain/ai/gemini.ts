@@ -1,4 +1,7 @@
-import { DEFAULT_AI_MODEL } from '@/config/ai'
+import {
+  DEFAULT_AI_MAX_OUTPUT_TOKENS,
+  DEFAULT_AI_MODEL,
+} from '@/config/ai'
 import {
   AiProviderError,
   PARTS_OF_SPEECH,
@@ -178,6 +181,7 @@ export class GeminiProvider implements AiProvider {
           { role: 'user', parts: [{ text: translationPrompt(request) }] },
         ],
         generationConfig: {
+          maxOutputTokens: DEFAULT_AI_MAX_OUTPUT_TOKENS,
           responseMimeType: 'application/json',
           responseJsonSchema,
           thinkingConfig: {
