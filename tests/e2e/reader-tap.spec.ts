@@ -103,10 +103,38 @@ test('tap inside the EPUB document detects a word and sentence', async ({
     page.getByText('The mother-in-law arrived!', { exact: true }),
   ).toBeVisible()
 
-  await page
-    .getByTestId('translation-backdrop')
-    .click({ position: { x: 5, y: 5 } })
+  const backdrop = page.getByTestId('translation-backdrop')
+  const backdropBox = await backdrop.boundingBox()
+  if (backdropBox === null) throw new Error('Dialog backdrop was not rendered')
+  await page.mouse.move(backdropBox.x + 5, backdropBox.y + 5)
+  await page.mouse.down()
+
+  await expect(page.getByRole('dialog')).toBeVisible()
+
+  await page.mouse.up()
 
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByTestId('translation-backdrop')).toHaveCount(0)
+
+  await readerFrame.evaluate(() => {
+    const paragraph = document.querySelector('p')
+    const node = paragraph?.firstChild
+    if (!(node instanceof Text) || paragraph === null) {
+      throw new Error('EPUB paragraph was not rendered')
+    }
+    const range = document.createRange()
+    range.setStart(node, 2)
+    range.setEnd(node, 3)
+    const rect = range.getBoundingClientRect()
+    paragraph.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      }),
+    )
+  })
+  await page.waitForTimeout(100)
+
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })

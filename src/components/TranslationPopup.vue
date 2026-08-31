@@ -66,10 +66,12 @@ const partOfSpeechLabels: Record<PartOfSpeech, string> = {
     <DialogOverlay
       class="fixed inset-0 z-40 bg-black/15"
       data-testid="translation-backdrop"
+      @click.stop="emit('close')"
     />
     <DialogContent
       class="fixed inset-x-2 bottom-2 z-50 mx-auto max-w-lg rounded-2xl border bg-card p-5 text-card-foreground shadow-2xl sm:inset-x-5 sm:bottom-5"
       aria-live="polite"
+      @pointer-down-outside.prevent
     >
       <div class="flex items-start justify-between gap-3">
         <div>

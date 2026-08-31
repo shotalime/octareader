@@ -204,9 +204,21 @@ describe('ReaderView', () => {
     expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
     expect(mocks.translate).toHaveBeenCalledOnce()
 
-    await wrapper
-      .get('[data-testid="translation-backdrop"]')
-      .trigger('pointerdown')
+    const backdrop = wrapper.get('[data-testid="translation-backdrop"]')
+    await backdrop.trigger('pointerdown')
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
+    expect(mocks.translate).toHaveBeenCalledOnce()
+
+    await backdrop.trigger('pointerup')
+    await backdrop.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(mocks.translate).toHaveBeenCalledOnce()
+
+    onTextTap?.({ word: 'next', sentence: 'The next word.' })
     await flushPromises()
 
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false)

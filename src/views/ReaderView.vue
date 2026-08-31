@@ -30,6 +30,8 @@ import { vocabularyService } from '@/domain/vocabulary'
 type TranslationPopupStatus =
   'needs-languages' | 'loading' | 'success' | 'error'
 
+const CLOSE_TAP_SUPPRESSION_MS = 750
+
 const route = useRoute()
 const viewport = ref<HTMLElement | null>(null)
 const session = ref<ReaderSession | null>(null)
@@ -51,6 +53,7 @@ const currentCfi = ref<string | null>(null)
 const isSavingVocabulary = ref(false)
 const isVocabularySaved = ref(false)
 let translationRequestId = 0
+let ignoreTextTapsUntil = 0
 
 const updateReaderState = (state: ReaderState): void => {
   currentCfi.value = state.cfi
@@ -109,6 +112,7 @@ const translateTappedText = async (): Promise<void> => {
 }
 
 const handleTextTap = (selection: TappedText): void => {
+  if (performance.now() < ignoreTextTapsUntil) return
   tappedText.value = selection
   void translateTappedText()
 }
@@ -132,6 +136,7 @@ const saveBookLanguages = async (): Promise<void> => {
 }
 
 const closeTranslation = (): void => {
+  ignoreTextTapsUntil = performance.now() + CLOSE_TAP_SUPPRESSION_MS
   translationRequestId += 1
   tappedText.value = null
   translationResult.value = null
