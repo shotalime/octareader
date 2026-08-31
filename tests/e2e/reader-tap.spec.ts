@@ -102,4 +102,11 @@ test('tap inside the EPUB document detects a word and sentence', async ({
   await expect(
     page.getByText('The mother-in-law arrived!', { exact: true }),
   ).toBeVisible()
+
+  await page
+    .getByTestId('translation-backdrop')
+    .click({ position: { x: 5, y: 5 } })
+
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByTestId('translation-backdrop')).toHaveCount(0)
 })

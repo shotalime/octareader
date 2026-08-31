@@ -192,6 +192,28 @@ describe('ReaderView', () => {
     expect(wrapper.text()).toContain('She is running home.')
   })
 
+  it('закрывает перевод по клику вне модалки без нового запроса', async () => {
+    const wrapper = mount(ReaderView, { attachTo: document.body })
+    await flushPromises()
+    const onTextTap = mocks.open.mock.calls[0]?.[3] as
+      | ((selection: { word: string; sentence: string | null }) => void)
+      | undefined
+    onTextTap?.({ word: 'running', sentence: 'She is running home.' })
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
+    expect(mocks.translate).toHaveBeenCalledOnce()
+
+    await wrapper
+      .get('[data-testid="translation-backdrop"]')
+      .trigger('pointerdown')
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(mocks.translate).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
   it('просит выбрать языки книги перед первым переводом', async () => {
     mocks.open.mockResolvedValue({
       ...(await mocks.open()),
