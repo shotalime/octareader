@@ -35,6 +35,15 @@ beforeEach(() => {
 })
 
 describe('App reader layout', () => {
+  it('создаёт по одной колонке на каждый пункт мобильной навигации', () => {
+    const wrapper = mountApp()
+    const navigation = wrapper.get('nav[aria-label="Мобильная навигация"]')
+
+    expect(navigation.attributes('style')).toContain(
+      'grid-template-columns: repeat(4, minmax(0, 1fr))',
+    )
+  })
+
   it('скрывает общую оболочку для открытой книги', () => {
     route.name = 'reader'
     route.params = { bookId: 'book-1' }

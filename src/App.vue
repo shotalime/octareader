@@ -123,7 +123,10 @@ const navigationItems = [
 
     <nav
       v-if="!isFullscreenReader"
-      class="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 rounded-2xl border border-border/80 bg-sidebar/95 p-1.5 shadow-2xl shadow-stone-900/10 backdrop-blur-xl lg:hidden"
+      class="fixed inset-x-3 bottom-3 z-30 grid rounded-2xl border border-border/80 bg-sidebar/95 p-1.5 shadow-2xl shadow-stone-900/10 backdrop-blur-xl lg:hidden"
+      :style="{
+        gridTemplateColumns: `repeat(${navigationItems.length}, minmax(0, 1fr))`,
+      }"
       aria-label="Мобильная навигация"
     >
       <RouterLink
