@@ -19,11 +19,15 @@ type ContentHook = {
 }
 type PointEvent = Event & { clientX: number; clientY: number }
 type RegisteredDocument = {
-  activate: (event: Event) => void
+  click: (event: Event) => void
   pointerDown: ((event: Event) => void) | null
+  pointerUp: ((event: Event) => void) | null
+  pointerCancel: (() => void) | null
 }
 
 const SEMANTIC_BLOCK_SELECTOR = 'p,h1,h2,h3,h4,h5,h6,li'
+const MAX_TAP_MOVEMENT = 10
+const COMPATIBILITY_CLICK_DELAY = 750
 
 const isPointEvent = (event: Event): event is PointEvent =>
   'clientX' in event &&
@@ -107,16 +111,31 @@ export const registerEpubTapDetection = (
   const documents = new Map<Document, RegisteredDocument>()
   const attach = (contents: Contents): void => {
     if (documents.has(contents.document)) return
-    const detect = (event: Event): void => {
-      if (!isPointEvent(event)) return
+    const detect = (event: Event): boolean => {
+      if (!isPointEvent(event)) return false
       const selection = detectTappedText(
         contents,
         event.clientX,
         event.clientY,
         locale,
       )
-      if (selection !== null) onTap(selection)
+      if (selection === null) return false
+      onTap(selection)
+      return true
     }
+    let lastPointerTap: { x: number; y: number; at: number } | null = null
+    const click = (event: Event): void => {
+      if (!isPointEvent(event)) return
+      const isCompatibilityClick =
+        lastPointerTap !== null &&
+        event.timeStamp - lastPointerTap.at <= COMPATIBILITY_CLICK_DELAY &&
+        Math.hypot(
+          event.clientX - lastPointerTap.x,
+          event.clientY - lastPointerTap.y,
+        ) <= MAX_TAP_MOVEMENT
+      if (!isCompatibilityClick) detect(event)
+    }
+    contents.document.addEventListener('click', click)
     if ('PointerEvent' in contents.window) {
       let pointerStart: { x: number; y: number } | null = null
       const pointerDown = (event: Event): void => {
@@ -131,20 +150,33 @@ export const registerEpubTapDetection = (
           event.clientY - pointerStart.y,
         )
         pointerStart = null
-        if (moved <= 10) detect(event)
+        if (moved <= MAX_TAP_MOVEMENT && detect(event)) {
+          lastPointerTap = {
+            x: event.clientX,
+            y: event.clientY,
+            at: event.timeStamp,
+          }
+        }
+      }
+      const pointerCancel = (): void => {
+        pointerStart = null
       }
       documents.set(contents.document, {
-        activate: pointerUp,
+        click,
         pointerDown,
+        pointerUp,
+        pointerCancel,
       })
       contents.document.addEventListener('pointerdown', pointerDown)
       contents.document.addEventListener('pointerup', pointerUp)
+      contents.document.addEventListener('pointercancel', pointerCancel)
     } else {
       documents.set(contents.document, {
-        activate: detect,
+        click,
         pointerDown: null,
+        pointerUp: null,
+        pointerCancel: null,
       })
-      contents.document.addEventListener('click', detect)
     }
   }
   hook.register(attach)
@@ -152,10 +184,15 @@ export const registerEpubTapDetection = (
   return () => {
     hook.deregister(attach)
     for (const [document, registered] of documents) {
-      document.removeEventListener('pointerup', registered.activate)
-      document.removeEventListener('click', registered.activate)
+      document.removeEventListener('click', registered.click)
       if (registered.pointerDown !== null) {
         document.removeEventListener('pointerdown', registered.pointerDown)
+      }
+      if (registered.pointerUp !== null) {
+        document.removeEventListener('pointerup', registered.pointerUp)
+      }
+      if (registered.pointerCancel !== null) {
+        document.removeEventListener('pointercancel', registered.pointerCancel)
       }
     }
     documents.clear()
