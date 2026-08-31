@@ -16,7 +16,7 @@ const router = createRouter({
       component: LibraryView,
     },
     {
-      path: '/reader/:bookId?',
+      path: '/reader/:bookId',
       name: 'reader',
       component: ReaderView,
     },

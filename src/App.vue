@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  BookOpenText,
   BrainCircuit,
   Languages,
   LibraryBig,
@@ -19,7 +18,6 @@ const isFullscreenReader = computed(
 
 const navigationItems = [
   { to: '/', label: 'Библиотека', icon: LibraryBig },
-  { to: '/reader', label: 'Читалка', icon: BookOpenText },
   { to: '/vocabulary', label: 'Словарь', icon: Languages },
   { to: '/review', label: 'Повторение', icon: BrainCircuit },
   { to: '/settings', label: 'Настройки', icon: Settings },

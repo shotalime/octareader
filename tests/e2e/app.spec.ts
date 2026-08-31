@@ -18,7 +18,7 @@ const createEpub = async (): Promise<Buffer> => {
 
 const directRoutes = [
   { path: '/', heading: 'Книги' },
-  { path: '/reader', heading: 'Читалка' },
+  { path: '/reader', heading: 'Страница не найдена' },
   { path: '/vocabulary', heading: 'Слова' },
   { path: '/review', heading: 'Повторение' },
   { path: '/settings', heading: 'Настройки' },
