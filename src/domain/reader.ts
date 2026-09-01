@@ -6,6 +6,7 @@ import type { NavItem } from 'epubjs/types/navigation'
 import { database, type OctaReaderDatabase } from '@/data/database'
 import type { BookSetting, ReadingProgress } from '@/data/models'
 import { registerEpubTapDetection } from '@/domain/epub-tap'
+import { secureEpubScriptEnvironment } from '@/domain/epub-security'
 import { normalizeLanguageCode } from '@/domain/languages'
 import {
   SettingsRepository,
@@ -195,9 +196,11 @@ export class ReaderService {
     let book: Book | null = null
     let rendition: Rendition | null = null
     let removeTapDetection = (): void => undefined
+    let removeEpubSecurity = (): void => undefined
     try {
       book = ePub(await fileRecord.file.arrayBuffer())
       await book.opened
+      removeEpubSecurity = secureEpubScriptEnvironment(book)
       if (savedLocations !== undefined) {
         try {
           book.locations.load(savedLocations.locations)
@@ -210,6 +213,7 @@ export class ReaderService {
         height: '100%',
         flow: 'paginated',
         spread: 'auto',
+        allowScriptedContent: true,
       })
       applyAppearance(rendition, appearance)
       removeTapDetection = registerEpubTapDetection(
@@ -226,6 +230,7 @@ export class ReaderService {
       }
     } catch {
       removeTapDetection()
+      removeEpubSecurity()
       rendition?.destroy()
       book?.destroy()
       throw new Error(READER_ERROR_MESSAGE)
@@ -329,6 +334,7 @@ export class ReaderService {
         renditionEvents.off('relocated', relocated)
         document.removeEventListener('visibilitychange', visibilityChanged)
         removeTapDetection()
+        removeEpubSecurity()
         await flushProgress()
         openedRendition.destroy()
         openedBook.destroy()

@@ -25,6 +25,9 @@ const mocks = vi.hoisted(() => ({
   selectTheme: vi.fn(),
   setFontSize: vi.fn(),
   setFont: vi.fn(),
+  renderTo: vi.fn(),
+  spineContentRegister: vi.fn(),
+  spineContentDeregister: vi.fn(),
 }))
 
 vi.mock('epubjs', () => ({ default: mocks.epubFactory }))
@@ -61,6 +64,30 @@ beforeEach(() => {
   mocks.selectTheme.mockReset()
   mocks.setFontSize.mockReset()
   mocks.setFont.mockReset()
+  mocks.spineContentRegister.mockReset()
+  mocks.spineContentDeregister.mockReset()
+  mocks.renderTo.mockReset().mockReturnValue({
+    display: mocks.display,
+    next: vi.fn(),
+    prev: vi.fn(),
+    destroy: mocks.destroyRendition,
+    location: { start: { index: 0 } },
+    themes: {
+      register: mocks.registerTheme,
+      select: mocks.selectTheme,
+      fontSize: mocks.setFontSize,
+      font: mocks.setFont,
+    },
+    hooks: {
+      content: { register: vi.fn(), deregister: vi.fn() },
+    },
+    on: (_event: string, listener: RelocatedListener) =>
+      mocks.listeners.push(listener),
+    off: (_event: string, listener: RelocatedListener) => {
+      const index = mocks.listeners.indexOf(listener)
+      if (index >= 0) mocks.listeners.splice(index, 1)
+    },
+  })
   mocks.epubFactory.mockReset().mockReturnValue({
     opened: Promise.resolve(),
     loaded: { navigation: Promise.resolve({ toc: [] }) },
@@ -71,29 +98,16 @@ beforeEach(() => {
       length: mocks.locationsLength,
       percentageFromCfi: mocks.percentageFromCfi,
     },
-    renderTo: () => ({
-      display: mocks.display,
-      next: vi.fn(),
-      prev: vi.fn(),
-      destroy: mocks.destroyRendition,
-      location: { start: { index: 0 } },
-      themes: {
-        register: mocks.registerTheme,
-        select: mocks.selectTheme,
-        fontSize: mocks.setFontSize,
-        font: mocks.setFont,
-      },
+    renderTo: mocks.renderTo,
+    spine: {
+      get: () => ({ href: 'chapter.xhtml' }),
       hooks: {
-        content: { register: vi.fn(), deregister: vi.fn() },
+        content: {
+          register: mocks.spineContentRegister,
+          deregister: mocks.spineContentDeregister,
+        },
       },
-      on: (_event: string, listener: RelocatedListener) =>
-        mocks.listeners.push(listener),
-      off: (_event: string, listener: RelocatedListener) => {
-        const index = mocks.listeners.indexOf(listener)
-        if (index >= 0) mocks.listeners.splice(index, 1)
-      },
-    }),
-    spine: { get: () => ({ href: 'chapter.xhtml' }) },
+    },
     packaging: { metadata: { language: 'en' } },
     destroy: mocks.destroyBook,
   })
@@ -134,6 +148,11 @@ describe('ReaderService progress', () => {
     expect(mocks.loadLocations).toHaveBeenCalledWith('["saved"]')
     expect(mocks.display).toHaveBeenCalledWith('epubcfi(/6/2)')
     expect(mocks.setFontSize).toHaveBeenCalledWith('100%')
+    expect(mocks.renderTo).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ allowScriptedContent: true }),
+    )
+    expect(mocks.spineContentRegister).toHaveBeenCalledOnce()
 
     vi.useFakeTimers()
     mocks.listeners[0]?.({ start: { cfi: 'epubcfi(/6/4)' } })
@@ -145,6 +164,7 @@ describe('ReaderService progress', () => {
       percentage: 25,
     })
     await session.destroy()
+    expect(mocks.spineContentDeregister).toHaveBeenCalledOnce()
     db.close()
   })
 
