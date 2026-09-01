@@ -131,6 +131,7 @@ describe('ReaderView', () => {
       expect.any(Function),
     )
     const controls = wrapper.get('nav[aria-label="Управление чтением"]')
+    expect(controls.classes()).toContain('reader-controls-safe')
     expect(
       controls.get('[aria-label="Вернуться в библиотеку"]').attributes('to'),
     ).toBe('/')

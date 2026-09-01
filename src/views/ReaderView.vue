@@ -302,7 +302,7 @@ onBeforeUnmount(() => void session.value?.destroy())
 
       <nav
         aria-label="Управление чтением"
-        class="grid shrink-0 grid-cols-[auto_auto_minmax(0,1fr)_minmax(2.75rem,5rem)_minmax(2.75rem,5rem)] items-center gap-1 border-t border-white/10 bg-stone-900 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 text-white sm:px-4"
+        class="reader-controls-safe grid shrink-0 grid-cols-[auto_auto_minmax(0,1fr)_minmax(2.75rem,5rem)_minmax(2.75rem,5rem)] items-center gap-1 border-t border-white/10 bg-stone-900 pt-2 text-white"
       >
         <Button
           as-child

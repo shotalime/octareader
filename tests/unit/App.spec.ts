@@ -42,6 +42,7 @@ describe('App reader layout', () => {
     expect(navigation.attributes('style')).toContain(
       'grid-template-columns: repeat(4, minmax(0, 1fr))',
     )
+    expect(navigation.classes()).toContain('mobile-navigation-safe')
   })
 
   it('скрывает общую оболочку для открытой книги', () => {
