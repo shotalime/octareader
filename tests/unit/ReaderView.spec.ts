@@ -135,6 +135,18 @@ describe('ReaderView', () => {
     expect(
       controls.get('[aria-label="Вернуться в библиотеку"]').attributes('to'),
     ).toBe('/')
+    expect(
+      controls.get('[aria-label="Вернуться в библиотеку"]').classes(),
+    ).toContain('size-12')
+    expect(
+      controls.get('button[aria-label="Открыть оглавление"]').classes(),
+    ).toContain('size-12')
+    expect(
+      controls.get('[aria-label="Вернуться в библиотеку"]').classes(),
+    ).toContain('bg-white/10')
+    expect(
+      controls.get('button[aria-label="Открыть оглавление"]').classes(),
+    ).toContain('border-white/15')
     expect(controls.text()).toContain('Прогресс рассчитывается')
     await controls
       .get('button[aria-label="Следующая страница"]')

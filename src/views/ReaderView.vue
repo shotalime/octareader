@@ -302,13 +302,13 @@ onBeforeUnmount(() => void session.value?.destroy())
 
       <nav
         aria-label="Управление чтением"
-        class="reader-controls-safe grid shrink-0 grid-cols-[auto_auto_minmax(0,1fr)_minmax(2.75rem,5rem)_minmax(2.75rem,5rem)] items-center gap-1 border-t border-white/10 bg-stone-900 pt-2 text-white"
+        class="reader-controls-safe grid shrink-0 grid-cols-[auto_auto_minmax(0,1fr)_minmax(2.75rem,5rem)_minmax(2.75rem,5rem)] items-center gap-1 border-t border-white/10 bg-stone-900 pt-2 px-4 text-white"
       >
         <Button
           as-child
           variant="ghost"
           size="icon"
-          class="text-white hover:bg-white/10"
+          class="size-12 border border-white/15 bg-white/10 text-white shadow-sm transition-all hover:border-white/25 hover:bg-white/20 active:scale-[0.97] [&_svg]:size-5"
         >
           <RouterLink to="/" aria-label="Вернуться в библиотеку">
             <LibraryBig aria-hidden="true" />
@@ -317,7 +317,7 @@ onBeforeUnmount(() => void session.value?.destroy())
         <Button
           variant="ghost"
           size="icon"
-          class="text-white hover:bg-white/10"
+          class="size-12 border border-white/15 bg-white/10 text-white shadow-sm transition-all hover:border-white/25 hover:bg-white/20 active:scale-[0.97] [&_svg]:size-5"
           :disabled="!session"
           :aria-expanded="isTableOfContentsOpen"
           aria-controls="reader-toc"

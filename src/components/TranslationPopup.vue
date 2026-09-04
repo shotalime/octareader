@@ -85,10 +85,16 @@ const partOfSpeechLabels: Record<PartOfSpeech, string> = {
       @click.stop="closeFromBackdropTap"
     />
     <DialogContent
-      class="fixed inset-x-2 bottom-2 z-50 mx-auto max-w-lg rounded-2xl border bg-card p-5 text-card-foreground shadow-2xl sm:inset-x-5 sm:bottom-5"
+      class="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[min(85dvh,48rem)] overflow-y-auto rounded-t-3xl border-x border-t bg-card px-5 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] text-card-foreground shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-[min(calc(100%-2.5rem),32rem)] sm:max-h-[calc(100dvh-2.5rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:p-6"
+      data-testid="translation-dialog"
       aria-live="polite"
       @pointer-down-outside.prevent
     >
+      <div
+        class="mx-auto mb-4 h-1 w-10 rounded-full bg-muted-foreground/30 sm:hidden"
+        data-testid="translation-drawer-handle"
+        aria-hidden="true"
+      />
       <div class="flex items-start justify-between gap-3">
         <div>
           <p
@@ -103,7 +109,12 @@ const partOfSpeechLabels: Record<PartOfSpeech, string> = {
           </DialogTitle>
         </div>
         <DialogClose as-child>
-          <Button variant="ghost" size="icon" aria-label="Закрыть перевод">
+          <Button
+            variant="ghost"
+            size="icon"
+            class="hidden sm:inline-flex"
+            aria-label="Закрыть перевод"
+          >
             <X aria-hidden="true" />
           </Button>
         </DialogClose>

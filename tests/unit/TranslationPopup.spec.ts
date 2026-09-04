@@ -19,6 +19,29 @@ const mountPopup = () =>
   })
 
 describe('TranslationPopup language selectors', () => {
+  it('renders a mobile bottom drawer and a centered desktop popup', () => {
+    const wrapper = mountPopup()
+    const dialog = wrapper.get('[data-testid="translation-dialog"]')
+
+    expect(dialog.classes()).toEqual(
+      expect.arrayContaining([
+        'inset-x-0',
+        'bottom-0',
+        'rounded-t-3xl',
+        'sm:left-1/2',
+        'sm:top-1/2',
+        'sm:-translate-x-1/2',
+        'sm:-translate-y-1/2',
+      ]),
+    )
+    expect(
+      wrapper.find('[data-testid="translation-drawer-handle"]').classes(),
+    ).toContain('sm:hidden')
+    expect(wrapper.get('button[aria-label="Закрыть перевод"]').classes()).toEqual(
+      expect.arrayContaining(['hidden', 'sm:inline-flex']),
+    )
+  })
+
   it('searches and selects a source language outside the former short list', async () => {
     const wrapper = mountPopup()
     await wrapper.get('input[aria-label="Поиск языка книги"]').setValue('he')

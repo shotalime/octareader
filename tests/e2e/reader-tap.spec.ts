@@ -103,6 +103,24 @@ test('tap inside the EPUB document detects a word and sentence', async ({
     page.getByText('The mother-in-law arrived!', { exact: true }),
   ).toBeVisible()
 
+  const dialog = page.getByTestId('translation-dialog')
+  const drawerHandle = page.getByTestId('translation-drawer-handle')
+  await expect(dialog).toBeVisible()
+  await expect(drawerHandle).toBeHidden()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  await expect(drawerHandle).toBeVisible()
+  await expect(dialog).toHaveCSS('bottom', '0px')
+
+  await page.setViewportSize({ width: 1280, height: 720 })
+
+  await expect(drawerHandle).toBeHidden()
+  const desktopDialogBox = await dialog.boundingBox()
+  if (desktopDialogBox === null) throw new Error('Dialog was not rendered')
+  expect(desktopDialogBox.y).toBeGreaterThanOrEqual(20)
+  expect(desktopDialogBox.y + desktopDialogBox.height).toBeLessThanOrEqual(700)
+
   const backdrop = page.getByTestId('translation-backdrop')
   const backdropBox = await backdrop.boundingBox()
   if (backdropBox === null) throw new Error('Dialog backdrop was not rendered')
@@ -116,7 +134,11 @@ test('tap inside the EPUB document detects a word and sentence', async ({
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByTestId('translation-backdrop')).toHaveCount(0)
 
-  await readerFrame.evaluate(() => {
+  const resizedReaderFrame = page.frames().find((frame) => frame !== page.mainFrame())
+  if (resizedReaderFrame === undefined) {
+    throw new Error('EPUB iframe was not recreated after resizing')
+  }
+  await resizedReaderFrame.evaluate(() => {
     const paragraph = document.querySelector('p')
     const node = paragraph?.firstChild
     if (!(node instanceof Text) || paragraph === null) {

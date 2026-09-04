@@ -84,9 +84,9 @@
   }
 
   .reader-controls-safe {
-    padding-right: calc(0.5rem + env(safe-area-inset-right, 0px));
+    padding-right: calc(0.75rem + env(safe-area-inset-right, 0px));
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
-    padding-left: calc(0.5rem + env(safe-area-inset-left, 0px));
+    padding-left: calc(0.75rem + env(safe-area-inset-left, 0px));
   }
 
   @media (min-width: 40rem) {
