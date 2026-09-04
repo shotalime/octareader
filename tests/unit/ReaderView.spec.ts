@@ -227,6 +227,23 @@ describe('ReaderView', () => {
     wrapper.unmount()
   })
 
+  it('не закрывает перевод от click, который не начался на затемнении', async () => {
+    const wrapper = mount(ReaderView, { attachTo: document.body })
+    await flushPromises()
+    const onTextTap = mocks.open.mock.calls[0]?.[3] as
+      | ((selection: { word: string; sentence: string | null }) => void)
+      | undefined
+    onTextTap?.({ word: 'running', sentence: 'She is running home.' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="translation-backdrop"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
+    expect(mocks.translate).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
   it('просит выбрать языки книги перед первым переводом', async () => {
     mocks.open.mockResolvedValue({
       ...(await mocks.open()),

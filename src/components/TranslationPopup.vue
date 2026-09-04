@@ -44,6 +44,21 @@ const handleOpenChange = (open: boolean): void => {
   if (!open) emit('close')
 }
 
+// On iOS Safari, the compatibility click generated after a tap in the EPUB
+// iframe can be retargeted to an overlay mounted during that tap.  Only close
+// when the gesture itself began on the overlay.
+let backdropPointerDown = false
+
+const startBackdropTap = (): void => {
+  backdropPointerDown = true
+}
+
+const closeFromBackdropTap = (): void => {
+  const shouldClose = backdropPointerDown
+  backdropPointerDown = false
+  if (shouldClose) emit('close')
+}
+
 const partOfSpeechLabels: Record<PartOfSpeech, string> = {
   noun: 'существительное',
   verb: 'глагол',
@@ -66,7 +81,8 @@ const partOfSpeechLabels: Record<PartOfSpeech, string> = {
     <DialogOverlay
       class="fixed inset-0 z-40 bg-black/15"
       data-testid="translation-backdrop"
-      @click.stop="emit('close')"
+      @pointerdown="startBackdropTap"
+      @click.stop="closeFromBackdropTap"
     />
     <DialogContent
       class="fixed inset-x-2 bottom-2 z-50 mx-auto max-w-lg rounded-2xl border bg-card p-5 text-card-foreground shadow-2xl sm:inset-x-5 sm:bottom-5"
